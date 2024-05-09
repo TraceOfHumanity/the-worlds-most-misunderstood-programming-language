@@ -32,3 +32,19 @@ const obj = { name: "John" };
 set.add(obj);
 
 console.log(set.has(obj)); // true
+
+const obj2 = { name: "Mary" };
+set.add(obj2);
+
+console.log(set.values());
+
+set.forEach((value) => {
+  console.log(value);
+});
+
+console.log(...set.values());
+console.log(...set.keys());
+console.log(...set.entries());
+console.log(...set);
+console.log([...set]);
+console.log(Array.from(set));
