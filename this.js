@@ -14,3 +14,13 @@ const obj = {
 obj.doLogThis();
 
 doLogThis();
+
+const obj2 = {
+  name: "Jane",
+  doLogThis: function(){
+    console.log("this", this);
+  }
+};
+
+var doLogThis2 = obj2.doLogThis;
+doLogThis2();
