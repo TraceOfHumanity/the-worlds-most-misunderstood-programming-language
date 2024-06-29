@@ -54,3 +54,14 @@ console.log(
     console.log(key, value, map);
   })
 );
+
+map.clear();
+
+console.log(map);
+
+map
+  .set("HTML", "HyperText Markup Language")
+  .set("CSS", "Cascading Style Sheets")
+  .set("JS", "JavaScript");
+const [fist, second, third] = map;
+console.log(fist, second, third);
