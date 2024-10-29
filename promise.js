@@ -6,7 +6,11 @@
 //   console.log(data);
 // });
 
-// fetch("https://jsonplaceholder.typicode.com/users")
+// const response = fetch("https://jsonplaceholder.typicode.com/users")
 //   .then((response) => response.json())
 //   .then((json) => console.log(json))
 //   .catch((error) => console.log(error));
+
+console.log(0);
+Promise.resolve(1).then((data) => console.log(data));
+console.log(2);
