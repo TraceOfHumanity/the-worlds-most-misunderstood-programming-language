@@ -50,3 +50,32 @@
 
 // const person1 = new Person("Alice", 25);
 // person1.greet();
+//------------------------------------------------------------------------------------------
+
+// const defaults = { name: "Anonymous", age: 0 };
+// const person = Object.assign({}, defaults, { isAdmin: false, age: 25 });
+// console.log(person);
+//------------------------------------------------------------------------------------------
+
+// function createPerson(name, age) {
+//   return {
+//     name,
+//     age,
+//     greet() {
+//       console.log(`Hello, my name is ${this.name}`);
+//     }
+//   };
+// }
+
+// const person = createPerson("Alice", 25);
+// person.greet();
+//------------------------------------------------------------------------------------------  
+
+// const jsonString = '{"name": "Alice", "age": 25}';
+// const person = JSON.parse(jsonString);
+// console.log(person);
+//------------------------------------------------------------------------------------------
+
+const entries = [["name", "Alice"], ["age", 25]];
+const person = Object.fromEntries(entries);
+console.log(person);
