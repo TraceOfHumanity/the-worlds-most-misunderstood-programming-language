@@ -12,3 +12,15 @@ const honda = new Car('Honda', 5);
 
 console.log(toyota.getBrand());
 console.log(honda.getBrand());
+
+
+// class Car {
+//   constructor(brand, age) {
+//     this.brand = brand;
+//     this.age = age;
+//   }
+
+//   getBrand() {
+//     return this.brand;
+//   }
+// }
