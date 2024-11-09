@@ -37,7 +37,7 @@
 //   return str.split('').reverse().join('');
 // }
 
-// console.log(reverseString("hello")); 
+// console.log(reverseString("hello"));
 
 // function reverseString(str) {
 //   const reverseStr = [];
@@ -51,17 +51,27 @@
 
 // console.log(reverseString("hello"));
 
+// function reverseString(str) {
+//   const reverseStr = [];
+//   let i = str.length - 1;
+//   console.log(i);
+
+//   while (i > 0) {
+//     reverseStr.push(str[i]);
+//     i--
+//   }
+
+//   return reverseStr
+// }
+
+// console.log(reverseString("hello"));
+
 function reverseString(str) {
-  const reverseStr = [];
-  let i = str.length - 1;
-  console.log(i);
+  const reverseStr = str.split("").reduce((accumulator, current) => {
+    return [current, ...accumulator];
+  }, []);
 
-  while (i > 0) {
-    reverseStr.push(str[i]);
-    i--
-  }
-
-  return reverseStr
+  return reverseStr;
 }
 
-console.log(reverseString("hello")); 
+console.log(reverseString("hello")); // Виведе: "olleh"
