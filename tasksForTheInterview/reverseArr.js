@@ -37,16 +37,31 @@
 //   return str.split('').reverse().join('');
 // }
 
-// console.log(reverseString("hello")); // Виведе: "olleh"
+// console.log(reverseString("hello")); 
+
+// function reverseString(str) {
+//   const reverseStr = [];
+
+//   for (let i = str.length - 1; i > 0; i--) {
+//     reverseStr.push(str[i]);
+//   }
+
+//   return reverseStr
+// }
+
+// console.log(reverseString("hello"));
 
 function reverseString(str) {
   const reverseStr = [];
+  let i = str.length - 1;
+  console.log(i);
 
-  for (let i = str.length - 1; i > 0; i--) {
+  while (i > 0) {
     reverseStr.push(str[i]);
+    i--
   }
 
   return reverseStr
 }
 
-console.log(reverseString("hello")); // Виведе: "olleh"
+console.log(reverseString("hello")); 
