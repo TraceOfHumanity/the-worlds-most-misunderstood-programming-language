@@ -33,3 +33,20 @@
 // const arr = [1, 2, 3, 4, 5];
 // console.log([...arr].map(arr.pop, arr));
 
+// function reverseString(str) {
+//   return str.split('').reverse().join('');
+// }
+
+// console.log(reverseString("hello")); // Виведе: "olleh"
+
+function reverseString(str) {
+  const reverseStr = [];
+
+  for (let i = str.length - 1; i > 0; i--) {
+    reverseStr.push(str[i]);
+  }
+
+  return reverseStr
+}
+
+console.log(reverseString("hello")); // Виведе: "olleh"
