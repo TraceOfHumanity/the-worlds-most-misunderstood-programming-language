@@ -6,28 +6,28 @@
 
 // console.log(fibonacci(6)); // Виведе: 8
 
-// 2. iterative
-function fibonacci(n) {
-  let a = 0;
-  let b = 1;
-  let c;
+// // 2. iterative
+// function fibonacci(n) {
+//   let a = 0;
+//   let b = 1;
+//   let c;
 
-  console.log(a);
-  console.log(b);
-  console.log(c);
+//   console.log(a);
+//   console.log(b);
+//   console.log(c);
 
-  for (let i = 2; i <= n; i++) {
-    c = a + b;
-    a = b;
-    b = c;
-  }
-  console.log(a);
-  console.log(b);
-  console.log(c);
-  return b;
-}
+//   for (let i = 2; i <= n; i++) {
+//     c = a + b;
+//     a = b;
+//     b = c;
+//   }
+//   console.log(a);
+//   console.log(b);
+//   console.log(c);
+//   return b;
+// }
 
-console.log(fibonacci(6)); // Виведе: 8
+// console.log(fibonacci(6)); // Виведе: 8
 
 // // 3. memoization
 // function fibonacci(n, memo = {}) {
@@ -36,3 +36,18 @@ console.log(fibonacci(6)); // Виведе: 8
 //   memo[n] = fibonacci(n - 1, memo) + fibonacci(n - 2, memo);
 //   return memo[n];
 // }
+
+function fibonacci(n) {
+  let a = 0;
+  let b = 1;
+  let c;
+
+  for (let i = 2; i <= n; i++) {
+    c = a + b;
+    a = b;
+    b = c;
+  }
+
+  return b;
+}
+console.log(fibonacci(6));
