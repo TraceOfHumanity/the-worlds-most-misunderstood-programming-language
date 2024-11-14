@@ -1,4 +1,3 @@
-
 const highestFrequency = (arr) => {
   const frequency = {};
   let maxFrequency = 0;
@@ -15,7 +14,7 @@ const highestFrequency = (arr) => {
     }
   }
   return maxFrequencyElement;
-  
+
 };
 
 console.log(highestFrequency(["a", "b", "c", "a", "b", "d", "c"]));
