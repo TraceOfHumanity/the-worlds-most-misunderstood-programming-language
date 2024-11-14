@@ -37,17 +37,17 @@
 //   return memo[n];
 // }
 
-function fibonacci(n) {
-  let a = 0;
-  let b = 1;
-  let c;
+// function fibonacci(n) {
+//   let a = 0;
+//   let b = 1;
+//   let c;
 
-  for (let i = 2; i <= n; i++) {
-    c = a + b;
-    a = b;
-    b = c;
-  }
+//   for (let i = 2; i <= n; i++) {
+//     c = a + b;
+//     a = b;
+//     b = c;
+//   }
 
-  return b;
-}
-console.log(fibonacci(6));
+//   return b;
+// }
+// console.log(fibonacci(6));
