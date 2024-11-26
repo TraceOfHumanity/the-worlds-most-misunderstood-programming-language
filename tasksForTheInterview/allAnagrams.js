@@ -4,3 +4,4 @@ function allAnagrams(arr) {
 }
 
 console.log(allAnagrams(["abcd", "bdac", "cabd"]));
+console.log(allAnagrams(["abcd", "bdac", "cabd", "abc"]));
