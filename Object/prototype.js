@@ -83,3 +83,16 @@ function bar() {}
 console.log(foo.__proto__ === Function.prototype);
 console.log(foo.__proto__ === bar.__proto__);
 console.log(Object.prototype === Function.prototype.__proto__);
+
+//--------------------------------
+
+console.log((10).__proto__ === Number.prototype);
+
+const n = 9999n;
+console.log(n.__proto__ === BigInt.prototype);
+
+const boolValue = true;
+console.log(Boolean.__proto__ === Function.prototype);
+console.log(Function.prototype.__proto__ === Object.prototype);
+console.log(boolValue.__proto__ === Boolean.prototype);
+
