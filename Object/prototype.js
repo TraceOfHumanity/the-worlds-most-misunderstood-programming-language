@@ -75,4 +75,11 @@ const obj = {};
 console.log(obj.__proto__ === Object.prototype);
 console.log(obj === Object.prototype.constructor());
 
+//--------------------------------
 
+function foo() {}
+function bar() {}
+
+console.log(foo.__proto__ === Function.prototype);
+console.log(foo.__proto__ === bar.__proto__);
+console.log(Object.prototype === Function.prototype.__proto__);
