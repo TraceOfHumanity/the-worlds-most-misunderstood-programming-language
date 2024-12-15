@@ -1,6 +1,5 @@
-
-const constants = require("../../../../constants");
-const { fork } = require("child_process");
+const constants = require("./constants");
+const {fork} = require("child_process");
 const express = require("express");
 const app = express();
 
@@ -9,18 +8,20 @@ app.get("/", (_, res) => {
 
   const message = {
     multiplier: constants.MULTIPLIER,
-    iterations: constants.ITERATIONS
+    iterations: constants.ITERATIONS,
   };
 
   childProcess.send(message);
   const startTime = new Date();
 
-  childProcess.on("message", message => {
+  childProcess.on("message", (message) => {
     const endTime = new Date();
     res.status(200).send({
       ...message,
-      time: endTime.getTime() - startTime.getTime() + "ms"
+      time: endTime.getTime() - startTime.getTime() + "ms",
     });
+    console.log("Child process killed");
+    childProcess.kill();
   });
 });
 

@@ -2,9 +2,9 @@
   "name": "the-world's-most-misunderstood-programming-language",
   "version": "1.0.0",
   "description": "",
-  "main": "localeCompare.js",
+  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "child-test": "node index.js"
   },
   "keywords": [],
   "author": "",
