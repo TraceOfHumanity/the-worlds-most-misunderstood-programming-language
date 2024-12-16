@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "child-test": "node index.js"
+    "child-test": "node index.js",
+    "worker-test": "node worker.js"
   },
   "keywords": [],
   "author": "",

@@ -2,5 +2,5 @@ module.exports = {
   PORT: 3636,
   HOST: "localhost",
   MULTIPLIER: 1000,
-  ITERATIONS: 500
+  ITERATIONS: 400
 };
