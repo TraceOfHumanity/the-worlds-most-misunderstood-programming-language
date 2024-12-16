@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "child-test": "node index.js",
-    "worker-test": "node worker.js"
+    "dev": "node index.js"
   },
   "keywords": [],
   "author": "",

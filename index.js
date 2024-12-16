@@ -1,73 +1,22 @@
-const constants = require("./constants");
-const {fork} = require("child_process");
-const express = require("express");
-const app = express();
+import {exec, execFile, spawn, fork} from "child_process";
+import path from "path";
+import {fileURLToPath} from "url";
+import {dirname} from "path";
 
-app.get("/", (_, res) => {
-  const childProcess = fork("child-process.js");
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-  const message = {
-    multiplier: constants.MULTIPLIER,
-    iterations: constants.ITERATIONS,
-  };
+// execFile
+const fileProcessorPath = path.resolve(__dirname, "execFileProcessor.js");
+execFile("node", [fileProcessorPath], (error, stdout, stderr) => {
+  if (error) {
+    console.error(`error: ${error.message}`);
+    return;
+  }
 
-  childProcess.send(message);
-  const startTime = new Date();
+  if (stderr) {
+    console.error(`stderr: ${stderr}`);
+    return;
+  }
 
-  childProcess.on("message", (message) => {
-    const endTime = new Date();
-    res.status(200).send({
-      ...message,
-      time: endTime.getTime() - startTime.getTime() + "ms",
-    });
-    console.log("Child process killed");
-    childProcess.kill();
-  });
-  console.log("i am unblocked now");
+  console.log(`stdout:\n${stdout}`);
 });
-
-app.get("/testrequest", (req, res) => {
-  res.send("I am unblocked now");
-});
-
-app.listen(constants.PORT, constants.HOST, () =>
-  console.log(
-    "listening on port " + constants.PORT + " and host " + constants.HOST
-  )
-);
-
-// const express = require("express");
-// const app = express();
-// const { Worker } = require("worker_threads");
-// const constants = require("../constants");
-
-// app.get("/", (_, res) => {
-//   const worker = new Worker("./worker.js");
-
-//   const message = {
-//     multiplier: constants.MULTIPLIER,
-//     iterations: constants.ITERATIONS
-//   };
-
-//   const startTime = new Date();
-
-//   worker.postMessage(message);
-
-//   worker.once("message", result => {
-//     const endTime = new Date();
-//     res.status(200).send({
-//       ...result,
-//       time: endTime.getTime() - startTime.getTime() + "ms"
-//     });
-//   });
-// });
-
-// app.get("/testrequest", (req, res) => {
-//   res.send("I am unblocked now");
-// });
-
-// app.listen(constants.PORT, constants.HOST, () =>
-//   console.log(
-//     "listening on port " + constants.PORT + " and host " + constants.HOST
-//   )
-// );
