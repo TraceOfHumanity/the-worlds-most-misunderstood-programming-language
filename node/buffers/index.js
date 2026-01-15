@@ -34,3 +34,23 @@ console.log(memoryContainer4.toString()); // Hi!
 
 const memoryContainer5 = Buffer.from("486921", "hex");
 console.log(memoryContainer5.toString("utf-8")); // Hi!
+
+//---------------------------------------------------------
+
+const memoryContainer6 = Buffer.from("Hi!", "utf-8");
+console.log(memoryContainer6.toString("utf-8")); // Hi!
+
+//---------------------------------------------------------
+
+const memoryContainer7 = Buffer.alloc(100, 1);
+// console.log(memoryContainer7);
+
+//---------------------------------------------------------
+
+const memoryContainer8 = Buffer.allocUnsafe(10000);
+
+for (let i = 0; i < memoryContainer8.length; i++) {
+    if (memoryContainer8[i] !== 0) {
+        console.log(memoryContainer8[i].toString(2));
+    }
+}
