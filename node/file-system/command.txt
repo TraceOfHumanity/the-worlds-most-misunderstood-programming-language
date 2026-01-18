@@ -1,1 +1,1 @@
-123 text
+delete the file test.txt
