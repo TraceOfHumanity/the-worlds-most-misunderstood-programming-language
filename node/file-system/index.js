@@ -31,17 +31,41 @@ const { buffer } = require('stream/consumers');
             await fs.unlink(path);
             console.log(`file ${path} has been deleted`);
         } catch (error) {
-            console.log(`file ${path} does not exist`);
+            if (error.code === 'ENOENT') {
+                console.log(`file ${path} does not exist`);
+            } else {
+                console.log(`error deleting file ${path}: ${error}`);
+            }
         }
     }
 
     const renameFile = async (oldPath, newPath) => {
-        console.log(`renaming file ${oldPath} to ${newPath}`);
+        try {
+            await fs.rename(oldPath, newPath);
+            console.log(`file ${oldPath} has been renamed to ${newPath}`);
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                console.log(`file ${oldPath} does not exist`);
+            } else {
+                console.log(`error renaming file ${oldPath} to ${newPath}: ${error}`);
+            }
+        }
     }
 
+    let addedContent;
+
     const addToFile = async (path, content) => {
-        console.log(`adding content to file ${path}: ${content}`);
-    }
+        if (addedContent === content) return;
+        try {
+            const fileHandle = await fs.open(path, "a");
+            fileHandle.write(content);
+            addedContent = content;
+            console.log("The content was added successfully.");
+        } catch (e) {
+            console.log("An error occurred while removing the file: ");
+            console.log(e);
+        }
+    };
 
 
 
@@ -55,7 +79,7 @@ const { buffer } = require('stream/consumers');
         const position = 0;
 
         await commandFileHandler.read(buffer, offset, length, position);
-        const command = buffer.toString("utf-8");
+        const command = buffer.toString("utf-8").trim();
 
         if (command.includes(CREATE_FILE)) {
             const path = command.substring(CREATE_FILE.length + 1);
@@ -84,7 +108,6 @@ const { buffer } = require('stream/consumers');
     const watcher = fs.watch('./command.txt');
     for await (const event of watcher) {
         if (event.eventType === 'change') {
-            console.log("Command file has been changed");
             commandFileHandler.emit("change");
 
         }
