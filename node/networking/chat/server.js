@@ -1,15 +1,22 @@
-const net = require('net');
+const net = require("net");
 
-const server = net.createServer((socket) => { })
+const server = net.createServer();
 
-server.on('connection', (socket) => {
-    console.log('new connection');
+// an array of client sockets
+const clients = [];
 
-    socket.on('data', (data) => {
-        console.log(data.toString('utf-8'));
-    })
-})
+server.on("connection", (socket) => {
+  console.log("A new connection to the server!");
 
-server.listen(3099, '127.0.0.1', () => {
-    console.log('opened server on', server.address());
-})
+  socket.on("data", (data) => {
+    clients.map((s) => {
+      s.write(data);
+    });
+  });
+
+  clients.push(socket);
+});
+
+server.listen(3008, "127.0.0.1", () => {
+  console.log("opened server on", server.address());
+});
