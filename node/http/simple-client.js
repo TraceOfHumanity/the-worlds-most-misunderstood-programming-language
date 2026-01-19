@@ -10,18 +10,31 @@ const request = http.request({
   path: "/create-post",
   headers: {
     "Content-Type": "application/json",
+    name: "Joe",
   },
 });
 
 // This event is emitted only once
-request.on("response", (response) => {});
+request.on("response", (response) => {
+  console.log("--------- STATUS: ---------");
+  console.log(response.statusCode);
 
-request.write(JSON.stringify({ message: "Hi there!" }));
-request.write(JSON.stringify({ message: "How are you doing?" }));
-request.write(JSON.stringify({ message: "Hey you still there?" }));
+  console.log("--------- HEADERS: ---------");
+  console.log(response.headers);
+
+  console.log("--------- BODY: ---------");
+  response.on("data", (chunk) => {
+    console.log(chunk.toString("utf-8"));
+  });
+
+  response.on("end", () => {
+    console.log("No more data in response.");
+  });
+});
 
 request.end(
   JSON.stringify({
-    message: "This is going to be my last message!",
+    title: "Title of my post",
+    body: "This is some text and more and more.",
   })
 );

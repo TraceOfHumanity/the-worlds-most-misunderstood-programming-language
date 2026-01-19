@@ -12,10 +12,26 @@ server.on("request", (request, response) => {
   console.log("--------- HEADERS: ---------");
   console.log(request.headers);
 
+  const name = request.headers.name;
+
   console.log("--------- BODY: ---------");
 
+  let data = "";
+
   request.on("data", (chunk) => {
-    console.log(chunk.toString("utf-8"));
+    data += chunk.toString();
+    console.log(data);
+  });
+
+  request.on("end", () => {
+    data = JSON.parse(data);
+
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(
+      JSON.stringify({
+        message: `Post with title ${data.title} was created by ${name}`,
+      })
+    );
   });
 });
 
