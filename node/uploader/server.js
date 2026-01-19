@@ -3,18 +3,21 @@ const fs = require("node:fs/promises");
 
 const server = net.createServer(() => {});
 
-let fileHandle, fileWriteStream;
-
 server.on("connection", (socket) => {
   console.log("New connection!");
+  let fileHandle, fileWriteStream;
 
   socket.on("data", async (data) => {
     if (!fileHandle) {
       socket.pause(); 
-      fileHandle = await fs.open(`storage/test.txt`, "w");
+
+      const indexOfDivider = data.indexOf("-------");
+      const fileName = data.subarray(10, indexOfDivider).toString("utf-8");
+
+      fileHandle = await fs.open(`storage/${fileName}`, "w");
       fileWriteStream = fileHandle.createWriteStream(); 
 
-      fileWriteStream.write(data);
+      fileWriteStream.write(data.subarray(indexOfDivider + 7));
 
       socket.resume(); 
       fileWriteStream.on("drain", () => {
@@ -28,7 +31,7 @@ server.on("connection", (socket) => {
   });
 
   socket.on("end", () => {
-    fileHandle.close();
+    if (fileHandle) fileHandle.close();
     fileHandle = undefined;
     fileWriteStream = undefined;
     console.log("Connection ended!");
