@@ -16,7 +16,7 @@ console.log(array2);
 const array3 = Array.from([1,2,3])
 console.log(array3);
 // або
-const array4 = Array(10) // створює масив довжиною 10
+const array4 = Array(10) // створює масив довжиною 10 з undefined значеннями
 console.log(array4);
 
 
