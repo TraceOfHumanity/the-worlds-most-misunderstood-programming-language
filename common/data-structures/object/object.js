@@ -3,18 +3,18 @@
 // значення: будь-який тип (включно з функціями, іншими обʼєктами)
 
 // синтаксис для створення об'єкта
-const user = {
+const human = {
     name: "Alex",
     age: 2_169_017,
     isDev: true
 };
 
-console.log(user);
+console.log(human);
 
 // доступ до значень об'єкта виконується за допомогою крапки
-console.log(user.name);
+console.log(human.name);
 // або за допомогою квадратних дужок
-console.log(user["age"]);
+console.log(human["age"]);
 
 // також обʼєкт можн створити за допомогою конструктора Object
 const obj = new Object();

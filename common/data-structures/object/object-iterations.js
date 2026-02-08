@@ -1,4 +1,4 @@
-const obj = {
+const human = {
     name: "Alex",
     age: 26_169_017,
     isDev: true
@@ -6,20 +6,20 @@ const obj = {
 
 //--------------------------------
 
-for (const key in obj) {
-    console.log(key, obj[key]);
+for (const key in human) {
+    console.log(key, human[key]);
 }
 
 //--------------------------------
 
-Object.keys(obj).forEach(
+Object.keys(human).forEach(
     (key) => {
-        console.log(key, obj[key]);
+        console.log(key, human[key]);
     }
 )
 
 //--------------------------------
 
-console.log(Object.keys(obj));
-console.log(Object.values(obj));
-console.log(Object.entries(obj));
+console.log(Object.keys(human));
+console.log(Object.values(human));
+console.log(Object.entries(human));
