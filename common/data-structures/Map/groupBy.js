@@ -17,3 +17,27 @@ const data = [
 ];
 console.log(groupBy(data, "role"));
 // Map { 'admin' => [{name: 'Alex', role: 'admin'}, {name: 'Anna', role: 'admin'}], 'user' => [{name: 'John', role: 'user'}] }
+
+
+// ------------------------------------------------------------
+
+const groupBy2 = (arr, key) => {
+  return arr.reduce((acc, item) => {
+    acc[item[key]] = [...(acc[item[key]] || []), item];
+    return acc;
+  }, {});
+};
+
+console.log(groupBy2(data, "role"));
+
+// ------------------------------------------------------------
+
+const groupBy3 = (arr, key) =>
+  arr.reduce((acc, item) => {
+    const group = item[key];
+    if (!acc[group]) acc[group] = [];
+    acc[group].push(item);
+    return acc;
+  }, {});
+
+console.log(groupBy3(data, "role"));
