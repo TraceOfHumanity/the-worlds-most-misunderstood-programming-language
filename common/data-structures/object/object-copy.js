@@ -2,7 +2,7 @@
 
 const obj = {
     name: "Alex",
-    age: 26_169_017,
+    age: 2_680_169_017,
     isDev: true
 };
 
