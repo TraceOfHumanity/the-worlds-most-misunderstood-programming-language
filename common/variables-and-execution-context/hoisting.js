@@ -140,3 +140,36 @@ outer();
 // - hoisting відбувається окремо в кожному Execution Context
 //   (глобальному та в кожному виклику функції)
 
+// ---
+
+function scoreTracker() {
+  debugger;
+  var score;
+
+  var addPoints = function (count) {
+    score += count;
+    return `Score incremented by ${count}. Current score is ${score}`;
+  };
+
+  function resetScore() {
+    score = 0;
+    return `Score reset to ${score}`;
+  }
+
+  score = 0;
+  addPoints(10);
+  resetScore();
+  debugger;
+}
+
+scoreTracker();
+
+function other(){
+  debugger;
+  var one = 1;
+  const two = 2;
+  let three = 3;
+  debugger;
+}
+
+other();
