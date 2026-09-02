@@ -2,11 +2,15 @@
 // ключі: string | symbol
 // значення: будь-який тип (включно з функціями, іншими обʼєктами)
 
-// синтаксис для створення об'єкта
+// всі основні способи створення об'єкта:
+const a = {};
+const b = new Object();
+const c = Object.create(null);
+const d = Object.create(proto);
 const human = {
-    name: "Alex",
-    age: 2_680_169_017,
-    isDev: true
+  name: "Alex",
+  age: 2_680_169_017,
+  isDev: true,
 };
 
 console.log(human);
@@ -18,11 +22,11 @@ console.log(human["age"]);
 
 // також обʼєкт можн створити за допомогою конструктора Object
 const obj = new Object();
-// або за допомогою класу 
+// або за допомогою класу
 class ClassObject {
-    constructor(name) {
-        this.name = name;
-    }
+  constructor(name) {
+    this.name = name;
+  }
 }
 // Через фабрику функції
 function classObject(name) {
@@ -31,3 +35,6 @@ function classObject(name) {
 
 // З прототипом
 const ProtoObject = Object.create(null);
+
+/* Object methods:
+ */
