@@ -158,7 +158,7 @@ console.log(singleton.increment()); // 2
 // --- СТАТИЧНІ МЕТОДИ (Object.methodName(...)) ---
 
 // Робота з властивостями
-// Object.keys()
+// Object.keys() — див. детальний розбір нижче
 // Object.values()
 // Object.entries()
 // Object.fromEntries()
@@ -199,3 +199,153 @@ console.log(singleton.increment()); // 2
 // obj.toString()
 // obj.toLocaleString()
 // obj.valueOf()
+
+
+// ==========================================================================
+// Object.keys() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.keys(obj) повертає МАСИВ рядків — імен ВЛАСНИХ (own)
+// перелічуваних (enumerable) властивостей об'єкта, у тому порядку,
+// в якому їх би обходив цикл for...in (але БЕЗ успадкованих
+// властивостей з прототипу).
+
+const userKeys = { name: "John", age: 30, city: "Kyiv" };
+console.log(Object.keys(userKeys)); // ["name", "age", "city"]
+
+
+// 2. "ВЛАСНІ" (OWN) — НЕ УСПАДКОВАНІ ВЛАСТИВОСТІ
+// -----------------------------------------------------
+// Object.keys() ігнорує властивості, отримані через прототип.
+// Бере лише ті, що визначені безпосередньо на самому об'єкті.
+
+const parentObj = { inherited: "я з прототипу" };
+const childObj = Object.create(parentObj);
+childObj.own = "я власна властивість";
+
+console.log(Object.keys(childObj)); // ["own"] — inherited НЕ потрапляє
+
+
+// 3. ТІЛЬКИ ENUMERABLE (перелічувані) ВЛАСТИВОСТІ
+// -----------------------------------------------------
+// Якщо властивість оголошена через Object.defineProperty з
+// enumerable: false, вона не потрапить у результат Object.keys().
+
+const withHiddenProp = {};
+Object.defineProperty(withHiddenProp, "visible", {
+  value: "видима",
+  enumerable: true,
+});
+Object.defineProperty(withHiddenProp, "hidden", {
+  value: "прихована",
+  enumerable: false,
+});
+console.log(Object.keys(withHiddenProp)); // ["visible"]
+
+
+// 4. ПОРЯДОК КЛЮЧІВ
+// -----------------------------------------------------
+// Порядок ключів у результаті НЕ довільний, він регламентований
+// специфікацією:
+//   1) спочатку всі ключі, що є цілими невід'ємними числами
+//      (integer-like keys, наприклад "0", "1", "2") — у ЗРОСТАЮЧОМУ
+//      числовому порядку, незалежно від порядку додавання;
+//   2) потім усі звичайні строкові ключі — у порядку ДОДАВАННЯ
+//      (insertion order);
+//   3) symbol-ключі Object.keys() взагалі не повертає.
+
+const orderedObj = { b: 1, 2: "два", a: 2, 1: "один" };
+console.log(Object.keys(orderedObj)); // ["1", "2", "b", "a"]
+// числові ключі "1" і "2" підняті наверх і відсортовані,
+// а "b" і "a" йдуть у порядку, в якому їх дописали
+
+
+// 5. РЕЗУЛЬТАТ — ЗАВЖДИ МАСИВ РЯДКІВ
+// -----------------------------------------------------
+// Навіть числові ключі повертаються як РЯДКИ, а не числа.
+
+const numericKeysObj = { 10: "a", 20: "b" };
+console.log(Object.keys(numericKeysObj)); // ["10", "20"]
+console.log(typeof Object.keys(numericKeysObj)[0]); // "string"
+
+
+// 6. РОБОТА З МАСИВАМИ
+// -----------------------------------------------------
+// Масиви — теж об'єкти, тому Object.keys() працює і з ними,
+// повертаючи індекси елементів як рядки.
+
+const arrForKeys = ["x", "y", "z"];
+console.log(Object.keys(arrForKeys)); // ["0", "1", "2"]
+
+
+// 7. ПОРОЖНІЙ ОБ'ЄКТ ТА "МЕЖОВІ" ЗНАЧЕННЯ
+// -----------------------------------------------------
+console.log(Object.keys({})); // []
+
+// Примітиви автоматично обгортаються у Wrapper-об'єкт (String, Number...),
+// і Object.keys повертає їхні власні перелічувані властивості:
+console.log(Object.keys("abc")); // ["0", "1", "2"] — символи рядка
+
+// null та undefined кидають помилку, бо їх неможливо привести до об'єкта:
+// Object.keys(null); // TypeError: Cannot convert undefined or null to object
+
+
+// 8. НАЙЧАСТІШЕ ЗАСТОСУВАННЯ — ІТЕРАЦІЯ ПО ОБ'ЄКТУ
+// -----------------------------------------------------
+// Оскільки об'єкти не є ітерованими (iterable) напряму (на відміну
+// від масивів чи Map), Object.keys() — найпоширеніший спосіб
+// пройтися по властивостях за допомогою forEach/map/for...of.
+
+const productForIteration = { title: "Ноутбук", price: 25000, inStock: true };
+
+Object.keys(productForIteration).forEach((key) => {
+  console.log(`${key}: ${productForIteration[key]}`);
+});
+// title: Ноутбук
+// price: 25000
+// inStock: true
+
+for (const key of Object.keys(productForIteration)) {
+  console.log(key, "=", productForIteration[key]);
+}
+
+
+// 9. ПОРІВНЯННЯ З ІНШИМИ СПОСОБАМИ ОБХОДУ
+// -----------------------------------------------------
+// - Object.keys(obj)         → масив [ключ, ключ, ...] (лише власні enumerable)
+// - Object.values(obj)       → масив [значення, значення, ...]
+// - Object.entries(obj)      → масив [[ключ, значення], ...]
+// - for...in                 → перебирає ключі, ВКЛЮЧНО зі спадкованими
+//   (тому в for...in часто додатково перевіряють obj.hasOwnProperty(key))
+// - Reflect.ownKeys(obj)     → усі власні ключі, включно з НЕ-enumerable
+//   і symbol-ключами (найповніший варіант)
+
+const forInDemo = Object.create({ inheritedProp: "з прототипу" });
+forInDemo.ownProp = "власна";
+
+for (const key in forInDemo) {
+  console.log("for...in:", key); // виведе і ownProp, і inheritedProp
+}
+// Object.keys(forInDemo) поверне лише ["ownProp"]
+
+
+// 10. ЧАСТИЙ ПРИЙОМ: ПЕРЕВІРКА, ЧИ ОБ'ЄКТ ПОРОЖНІЙ
+// -----------------------------------------------------
+function isEmptyObject(obj) {
+  return Object.keys(obj).length === 0;
+}
+console.log(isEmptyObject({})); // true
+console.log(isEmptyObject({ a: 1 })); // false
+
+
+// ПІДСУМОК:
+// - повертає масив рядків-імен власних enumerable властивостей
+// - НЕ включає успадковані з прототипу властивості
+// - НЕ включає symbol-ключі
+// - НЕ включає non-enumerable властивості
+// - порядок: числові ключі за зростанням → рядкові за порядком додавання
+// - працює з масивами (повертає індекси-рядки) і з примітивами-обгортками
+// - null/undefined → TypeError
+// - головне застосування: ітерація по властивостях об'єкта
