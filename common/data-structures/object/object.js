@@ -2220,3 +2220,503 @@ const frozenForProto = Object.freeze({});
 // - кидає TypeError на non-extensible об'єктах (frozen/sealed/prevented)
 // - виправдане застосування: бібліотеки/полiфіли, динамічна зміна
 //   поведінки; НЕ для звичайного щоденного коду
+
+
+// ==========================================================================
+// Object.freeze() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.freeze(obj) робить об'єкт ПОВНІСТЮ незмінним:
+//   - не можна додавати нові властивості;
+//   - не можна видаляти існуючі властивості;
+//   - не можна змінювати значення існуючих властивостей;
+//   - не можна змінювати дескриптори властивостей (writable/
+//     enumerable/configurable) — усі стають configurable: false,
+//     а data-властивості ще й writable: false.
+// Повертає ТОЙ САМИЙ об'єкт (мутований), не копію.
+
+const frozenObj = Object.freeze({ name: "John", age: 30 });
+frozenObj.age = 99;          // ігнорується мовчки (нестрогий режим)
+frozenObj.city = "Kyiv";     // теж ігнорується — не можна додати нову властивість
+delete frozenObj.name;       // теж ігнорується — не можна видалити
+console.log(frozenObj); // { name: "John", age: 30 } — без жодних змін
+
+// У СТРОГОМУ РЕЖИМІ будь-яка з цих спроб кидає TypeError:
+(function () {
+  "use strict";
+  try {
+    frozenObj.age = 100;
+  } catch (e) {
+    console.log(e.message); // "Cannot assign to read only property 'age' of object..."
+  }
+})();
+
+
+// 2. Object.isFrozen() — ПЕРЕВІРКА, ЧИ ОБ'ЄКТ ЗАМОРОЖЕНИЙ
+// -----------------------------------------------------
+console.log(Object.isFrozen(frozenObj)); // true
+console.log(Object.isFrozen({}));        // false — звичайний об'єкт не заморожений
+
+
+// 3. ЦЕ SHALLOW FREEZE (ПОВЕРХНЕВЕ ЗАМОРОЖУВАННЯ) — КЛАСИЧНА ПАСТКА
+// -----------------------------------------------------
+// freeze() блокує лише властивості ПЕРШОГО РІВНЯ. Якщо значення
+// властивості — вкладений об'єкт/масив, ЙОГО можна змінювати
+// як завгодно — freeze() на нього НЕ поширюється.
+
+const shallowFrozenObj = Object.freeze({
+  name: "Продукт",
+  meta: { price: 100 },
+});
+shallowFrozenObj.meta.price = 999; // ПРАЦЮЄ! meta — окремий об'єкт, не заморожений
+console.log(shallowFrozenObj.meta.price); // 999
+console.log(Object.isFrozen(shallowFrozenObj.meta)); // false — вкладений об'єкт вільний
+
+
+// 4. ГЛИБОКЕ ЗАМОРОЖУВАННЯ (DEEP FREEZE) — ВЛАСНА РЕАЛІЗАЦІЯ
+// -----------------------------------------------------
+// У самій мові немає вбудованого "deepFreeze" — його пишуть
+// рекурсивно самостійно (або беруть з бібліотеки).
+
+function deepFreeze(obj) {
+  Object.getOwnPropertyNames(obj).forEach((key) => {
+    const value = obj[key];
+    if (value !== null && (typeof value === "object" || typeof value === "function")) {
+      deepFreeze(value); // рекурсивно заморожуємо вкладені об'єкти
+    }
+  });
+  return Object.freeze(obj);
+}
+
+const deepFrozenObj = deepFreeze({
+  name: "Продукт",
+  meta: { price: 100 },
+});
+deepFrozenObj.meta.price = 999; // тепер ігнорується — meta теж заморожена
+console.log(deepFrozenObj.meta.price); // 100
+console.log(Object.isFrozen(deepFrozenObj.meta)); // true
+
+
+// 5. WRITABLE, ALE НЕ CONST: РІЗНИЦЯ МІЖ freeze() ТА const
+// -----------------------------------------------------
+// Дуже поширена плутанина: const захищає лише BINDING (не можна
+// переприсвоїти саму змінну), а freeze() захищає ЗНАЧЕННЯ об'єкта
+// (не можна змінити його вміст). Це ДВІ РІЗНІ, незалежні речі —
+// докладно про це в const.js.
+
+const notActuallyImmutable = { count: 0 };
+notActuallyImmutable.count = 1; // ПРАЦЮЄ — const не захищає вміст об'єкта
+console.log(notActuallyImmutable.count); // 1
+
+const trulyFrozen = Object.freeze({ count: 0 });
+trulyFrozen.count = 1; // НЕ працює — freeze захищає саме вміст
+console.log(trulyFrozen.count); // 0
+
+// Найнадійніший захист — комбінація ОБОХ:
+const constAndFrozen = Object.freeze({ count: 0 });
+// тепер ні binding (const), ні вміст (freeze) змінити не можна
+
+
+// 6. ЩО САМЕ ВІДБУВАЄТЬСЯ З ДЕСКРИПТОРАМИ ПІСЛЯ freeze()
+// -----------------------------------------------------
+console.log(Object.getOwnPropertyDescriptor(frozenObj, "age"));
+// { value: 30, writable: false, enumerable: true, configurable: false }
+// enumerable ЗАЛИШАЄТЬСЯ таким, яким був — freeze() його НЕ чіпає,
+// міняються лише writable (→ false) і configurable (→ false)
+
+
+// 7. МЕТОДИ, ЯКІ FREEZE() НЕ ЗУПИНЯЄ (важливий нюанс з масивами)
+// -----------------------------------------------------
+// Заморожений масив теж не можна мутувати мутуючими методами —
+// але деякі методи, що НЕ змінюють оригінал (map, filter, slice),
+// продовжують працювати, бо вони повертають НОВИЙ масив.
+
+const frozenArr = Object.freeze([1, 2, 3]);
+// frozenArr.push(4);  // TypeError у strict mode: Cannot add property 3, object is not extensible
+console.log(frozenArr.map((n) => n * 2)); // [2, 4, 6] — це ок, map створює новий масив
+
+
+// 8. ЯКЩО ВЛАСТИВІСТЬ — ГЕТТЕР/СЕТТЕР
+// -----------------------------------------------------
+// freeze() робить accessor-властивість configurable: false, але
+// САМІ get/set функції freeze() не зупиняє — сеттер, якщо він є,
+// продовжує виконуватись (freeze не забороняє логіку всередині set).
+
+let internalCounter = 0;
+const objWithSetterFrozen = Object.freeze({
+  get counter() {
+    return internalCounter;
+  },
+  set counter(value) {
+    internalCounter = value; // freeze НЕ блокує сам сеттер
+  },
+});
+objWithSetterFrozen.counter = 5;
+console.log(objWithSetterFrozen.counter); // 5 — сеттер спрацював попри freeze()
+
+
+// 9. НАЙЧАСТІШЕ ЗАСТОСУВАННЯ
+// -----------------------------------------------------
+// - створення справжніх констант-конфігів/enum'ів:
+const Colors = Object.freeze({
+  RED: "red",
+  GREEN: "green",
+  BLUE: "blue",
+});
+// Colors.RED = "purple"; // не спрацює — Colors справді незмінний
+
+// - захист публічного стану бібліотеки/модуля від випадкових мутацій
+//   ззовні (наприклад, конфігурація за замовчуванням)
+
+// - immutable-патерни у стані застосунку (спрощений варіант того,
+//   що робить Immutable.js чи Redux Toolkit "під капотом" з Immer)
+
+
+// 10. ПОРІВНЯННЯ З ІНШИМИ РІВНЯМИ ОБМЕЖЕННЯ (seal/preventExtensions)
+// -----------------------------------------------------
+// - Object.preventExtensions(obj) → лише забороняє ДОДАВАННЯ нових властивостей
+// - Object.seal(obj)               → + забороняє ВИДАЛЕННЯ (але значення міняти можна)
+// - Object.freeze(obj)             → + забороняє ЗМІНУ значень (найсуворіший рівень)
+// Кожен наступний рівень — це "надбудова" над попереднім
+// (детально розбираємо в seal()/preventExtensions() нижче).
+
+
+// ПІДСУМОК:
+// - Object.freeze() — найсуворіший рівень захисту об'єкта: заборонено
+//   додавати, видаляти й змінювати властивості
+// - Object.isFrozen(obj) перевіряє, чи об'єкт заморожений
+// - це SHALLOW freeze — вкладені об'єкти НЕ захищені автоматично,
+//   для цього потрібна рекурсивна deepFreeze()
+// - const захищає binding змінної, freeze() захищає ВМІСТ об'єкта —
+//   це різні, незалежні механізми
+// - у strict mode спроба зміни кидає TypeError, у нестрогому —
+//   мовчки ігнорується
+// - геттери/сеттери продовжують працювати навіть на замороженому об'єкті
+// - типове застосування: константи/enum'и, захист конфігів, immutable-стан
+
+
+// ==========================================================================
+// Object.seal() / Object.isSealed() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ Object.seal()
+// -----------------------------------------------------
+// Object.seal(obj) забороняє ДОДАВАТИ нові властивості й ВИДАЛЯТИ
+// існуючі (робить усі властивості configurable: false), АЛЕ, на
+// відміну від freeze(), ЗНАЧЕННЯ вже існуючих властивостей МІНЯТИ
+// МОЖНА (writable залишається таким, яким був).
+
+const sealedObj = Object.seal({ name: "John", age: 30 });
+sealedObj.age = 31;        // ПРАЦЮЄ — значення можна змінювати
+sealedObj.city = "Kyiv";   // ігнорується — не можна додати нову властивість
+delete sealedObj.name;     // ігнорується — не можна видалити
+console.log(sealedObj); // { name: "John", age: 31 }
+
+
+// 2. Object.isSealed() — ПЕРЕВІРКА
+// -----------------------------------------------------
+console.log(Object.isSealed(sealedObj)); // true
+console.log(Object.isSealed({}));        // false
+// Кожен frozen-об'єкт автоматично є і sealed (freeze — суворіший рівень):
+console.log(Object.isSealed(Object.freeze({}))); // true
+
+
+// 3. ЩО ВІДБУВАЄТЬСЯ З ДЕСКРИПТОРАМИ
+// -----------------------------------------------------
+console.log(Object.getOwnPropertyDescriptor(sealedObj, "age"));
+// { value: 31, writable: true, enumerable: true, configurable: false }
+// на відміну від freeze(): writable ЗАЛИШИВСЯ true
+
+
+// ==========================================================================
+// Object.preventExtensions() / Object.isExtensible() — детальний розбір
+// ==========================================================================
+
+// 4. ЩО РОБИТЬ Object.preventExtensions()
+// -----------------------------------------------------
+// Найм'якший рівень обмеження: забороняє лише ДОДАВАННЯ нових
+// властивостей. Існуючі властивості й далі можна МІНЯТИ і ВИДАЛЯТИ.
+
+const nonExtensibleObj = Object.preventExtensions({ name: "John", age: 30 });
+nonExtensibleObj.age = 31;        // ПРАЦЮЄ
+delete nonExtensibleObj.name;     // ПРАЦЮЄ — видалення дозволене
+nonExtensibleObj.city = "Kyiv";   // ігнорується — нову властивість не додати
+console.log(nonExtensibleObj); // { age: 31 }
+
+
+// 5. Object.isExtensible() — ПЕРЕВІРКА
+// -----------------------------------------------------
+console.log(Object.isExtensible(nonExtensibleObj)); // false
+console.log(Object.isExtensible({}));                // true — звичайний об'єкт розширюваний
+// sealed і frozen об'єкти теж non-extensible (це найслабша умова із трьох):
+console.log(Object.isExtensible(Object.seal({})));   // false
+console.log(Object.isExtensible(Object.freeze({}))); // false
+
+
+// 6. ПОРІВНЯЛЬНА ТАБЛИЦЯ ТРЬОХ РІВНІВ ОБМЕЖЕННЯ
+// -----------------------------------------------------
+//                         додати нову  видалити   змінити значення
+// preventExtensions()  →      ✗           ✓             ✓
+// seal()                →      ✗           ✗             ✓
+// freeze()              →      ✗           ✗             ✗
+// Кожен наступний рівень включає в себе обмеження попереднього:
+// frozen ⊂ sealed ⊂ non-extensible (усі sealed є non-extensible,
+// усі frozen є sealed).
+
+
+// 7. ЯК "ЗНЯТИ" ЦІ ОБМЕЖЕННЯ — НІЯК
+// -----------------------------------------------------
+// У стандартному JS немає способу "розморозити" чи "розпечатати"
+// об'єкт назад — ці операції ОДНОСТОРОННІ. Єдиний вихід — створити
+// НОВИЙ об'єкт (наприклад, через spread {...obj}) з тими самими
+// даними, але вже без обмежень.
+
+const unlockedCopy = { ...sealedObj }; // новий, звичайний, розширюваний об'єкт
+console.log(Object.isSealed(unlockedCopy)); // false
+
+
+// 8. ВСІ ТРИ — ТЕЖ SHALLOW (не поширюються на вкладені об'єкти)
+// -----------------------------------------------------
+const shallowSealed = Object.seal({ meta: { price: 100 } });
+shallowSealed.meta.price = 999; // працює — meta не запечатана
+console.log(shallowSealed.meta.price); // 999
+
+
+// ==========================================================================
+// Object.is() — детальний розбір
+// ==========================================================================
+
+// 9. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.is(value1, value2) порівнює два значення за принципом
+// SameValue-алгоритму — це схоже на === (strict equality), але
+// з двома важливими винятками.
+
+console.log(Object.is(1, 1));         // true — як і ===
+console.log(Object.is("a", "a"));     // true
+console.log(Object.is({}, {}));       // false — різні посилання, як і ===
+
+
+// 10. ВІДМІННІСТЬ №1: NaN
+// -----------------------------------------------------
+// === вважає NaN не рівним самому собі (єдине значення в JS з такою
+// властивістю), а Object.is() коректно визначає NaN як рівний NaN.
+
+console.log(NaN === NaN);        // false — класична пастка
+console.log(Object.is(NaN, NaN)); // true — Object.is() тут точніший
+
+
+// 11. ВІДМІННІСТЬ №2: +0 ТА -0
+// -----------------------------------------------------
+// === вважає +0 і -0 однаковими, а Object.is() їх РОЗРІЗНЯЄ
+// (математично й за специфікацією IEEE 754 це різні значення).
+
+console.log(0 === -0);          // true
+console.log(Object.is(0, -0));  // false — Object.is() бачить різницю
+console.log(Object.is(-0, -0)); // true
+
+
+// 12. НАЙЧАСТІШЕ ЗАСТОСУВАННЯ
+// -----------------------------------------------------
+// - надійна перевірка на NaN без хитрощів на кшталт value !== value:
+function isActuallyNaN(value) {
+  return Object.is(value, NaN);
+}
+console.log(isActuallyNaN(NaN)); // true
+
+// - React та інші бібліотеки використовують SameValue-подібне
+//   порівняння у механізмах порівняння пропсів/стану (memo,
+//   useState-сеттери), саме тому корисно розуміти цю відмінність
+
+// - для звичайного щоденного порівняння Object.is() НЕ замінює ===:
+//   він повільніший і призначений саме для цих "межових" випадків
+
+
+// ==========================================================================
+// Object.groupBy() — детальний розбір (ES2024)
+// ==========================================================================
+
+// 13. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.groupBy(iterable, callback) групує елементи ітерованої
+// колекції (масиву чи будь-якого iterable) у ЗВИЧАЙНИЙ ОБ'ЄКТ, де
+// ключі — це РЕЗУЛЬТАТ виклику callback для кожного елемента,
+// а значення — МАСИВИ елементів, що потрапили в цю групу.
+
+const inventory = [
+  { name: "яблука", type: "фрукт" },
+  { name: "морква", type: "овоч" },
+  { name: "банани", type: "фрукт" },
+  { name: "картопля", type: "овоч" },
+];
+
+const groupedByType = Object.groupBy(inventory, (item) => item.type);
+console.log(groupedByType);
+// {
+//   фрукт: [{ name: "яблука", ... }, { name: "банани", ... }],
+//   овоч:  [{ name: "морква", ... }, { name: "картопля", ... }]
+// }
+
+
+// 14. CALLBACK ОТРИМУЄ (елемент, індекс) — ЯК У map/filter
+// -----------------------------------------------------
+const numbersToGroup = [1, 2, 3, 4, 5, 6];
+const groupedByParity = Object.groupBy(numbersToGroup, (num) => (num % 2 === 0 ? "парні" : "непарні"));
+console.log(groupedByParity); // { непарні: [1, 3, 5], парні: [2, 4, 6] }
+
+const groupedByIndex = Object.groupBy(["a", "b", "c"], (_, index) => (index < 2 ? "перші" : "решта"));
+console.log(groupedByIndex); // { перші: ["a", "b"], решта: ["c"] }
+
+
+// 15. РЕЗУЛЬТАТ — ОБ'ЄКТ БЕЗ ПРОТОТИПУ (Object.create(null))
+// -----------------------------------------------------
+// Об'єкт, який повертає groupBy(), НЕ має Object.prototype у
+// ланцюжку — це навмисно зроблено, щоб ключі групування (наприклад,
+// "toString" чи "constructor") не конфліктували зі спадкованими
+// властивостями.
+
+console.log(Object.getPrototypeOf(groupedByType)); // null
+console.log(Object.hasOwn(groupedByType, "фрукт")); // true — перевіряти варто саме так
+
+
+// 16. ДО ES2024 ЦЕ РОБИЛИ ВРУЧНУ ЧЕРЕЗ reduce()
+// -----------------------------------------------------
+function groupByManual(array, callback) {
+  return array.reduce((acc, item, index) => {
+    const key = callback(item, index);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {});
+}
+console.log(groupByManual(numbersToGroup, (num) => (num % 2 === 0 ? "парні" : "непарні")));
+// той самий результат, що й Object.groupBy(), але без null-прототипу
+
+
+// 17. Map.groupBy() — "СЕСТРА" ДЛЯ ГРУПУВАННЯ В Map
+// -----------------------------------------------------
+// Якщо ключами групування можуть бути НЕ ЛИШЕ рядки/символи
+// (наприклад, об'єкти чи числа, де важлива саме ідентичність
+// ключа), поруч є статичний метод Map.groupBy() з тим самим
+// API, але результат — Map замість звичайного об'єкта.
+
+const groupedIntoMap = Map.groupBy(numbersToGroup, (num) => (num % 2 === 0 ? "парні" : "непарні"));
+console.log(groupedIntoMap instanceof Map); // true
+console.log(groupedIntoMap.get("парні"));   // [2, 4, 6]
+
+
+// ==========================================================================
+// МЕТОДИ ЕКЗЕМПЛЯРА (через Object.prototype) — детальний розбір
+// ==========================================================================
+
+// 18. obj.hasOwnProperty(key)
+// -----------------------------------------------------
+// Перевіряє, чи obj має ВЛАСНУ властивість key (без успадкованих).
+// Сучасна рекомендована заміна — статичний Object.hasOwn(obj, key)
+// (детально розібрано вище) — саме через проблеми з
+// Object.create(null) і можливістю перевизначення цього методу.
+
+console.log({ a: 1 }.hasOwnProperty("a")); // true
+
+
+// 19. obj.isPrototypeOf(otherObj)
+// -----------------------------------------------------
+// Перевіряє, чи obj ЗНАХОДИТЬСЯ У ЛАНЦЮЖКУ ПРОТОТИПІВ otherObj —
+// тобто чи otherObj (прямо чи опосередковано) успадковує від obj.
+// Це "дзеркальна" перевірка до instanceof (яка перевіряє через
+// конструктор, а не через сам об'єкт-прототип).
+
+function Vehicle() {}
+const vehicleProto = Vehicle.prototype;
+const car = new Vehicle();
+
+console.log(vehicleProto.isPrototypeOf(car)); // true
+console.log(car instanceof Vehicle);          // true — той самий сенс, інший синтаксис
+
+console.log(Object.prototype.isPrototypeOf(car)); // true — Object.prototype теж у ланцюжку
+
+
+// 20. obj.propertyIsEnumerable(key)
+// -----------------------------------------------------
+// Перевіряє, чи ВЛАСНА властивість key є enumerable. Для
+// успадкованих властивостей ЗАВЖДИ повертає false, навіть якщо
+// вони enumerable на самому прототипі.
+
+const enumDemoObj = { visible: 1 };
+Object.defineProperty(enumDemoObj, "hidden", { value: 2, enumerable: false });
+console.log(enumDemoObj.propertyIsEnumerable("visible")); // true
+console.log(enumDemoObj.propertyIsEnumerable("hidden"));  // false
+console.log(enumDemoObj.propertyIsEnumerable("toString")); // false — не власна властивість
+
+
+// 21. obj.toString()
+// -----------------------------------------------------
+// Повертає рядкове представлення об'єкта. Викликається неявно
+// під час приведення до рядка (шаблонні рядки, конкатенація тощо).
+// Дефолтна реалізація з Object.prototype повертає "[object Object]" —
+// саме тому багато вбудованих типів (Array, Date, RegExp...)
+// ПЕРЕВИЗНАЧАЮТЬ toString() під власні потреби.
+
+console.log({}.toString());              // "[object Object]"
+console.log([1, 2, 3].toString());       // "1,2,3" — Array перевизначає toString
+console.log(`Значення: ${{}}`);          // "Значення: [object Object]" — неявний виклик
+
+class Money {
+  constructor(amount) {
+    this.amount = amount;
+  }
+  toString() {
+    return `${this.amount} грн`;
+  }
+}
+console.log(`Ціна: ${new Money(100)}`); // "Ціна: 100 грн" — власний toString спрацював
+
+
+// 22. obj.toLocaleString()
+// -----------------------------------------------------
+// За замовчуванням робить те саме, що й toString(), АЛЕ призначений
+// для ПЕРЕВИЗНАЧЕННЯ під локалізоване форматування (дати, числа,
+// валюта тощо) — саме так це роблять Number, Date, Array.
+
+console.log((1234567.891).toLocaleString("uk-UA")); // "1 234 567,891" — залежно від рушія/локалі
+console.log(new Date(2026, 0, 1).toLocaleString("uk-UA")); // локалізована дата й час
+
+
+// 23. obj.valueOf()
+// -----------------------------------------------------
+// Повертає ПРИМІТИВНЕ значення об'єкта — викликається неявно
+// під час приведення до числа/арифметичних операцій (тоді як
+// toString() викликається для приведення до рядка). Порядок
+// спроб приведення (ToPrimitive) залежить від "натяку" (hint):
+// для арифметики спершу пробується valueOf(), для рядків — toString().
+
+class Wallet {
+  constructor(balance) {
+    this.balance = balance;
+  }
+  valueOf() {
+    return this.balance;
+  }
+}
+const wallet1 = new Wallet(100);
+const wallet2 = new Wallet(50);
+console.log(wallet1 + wallet2); // 150 — valueOf() використано в арифметиці
+console.log(wallet1 > wallet2); // true — теж через valueOf()
+
+console.log(new Date(2026, 0, 1).valueOf()); // timestamp у мілісекундах (число)
+
+
+// ПІДСУМОК ПО ЗАЛИШКОВИХ МЕТОДАХ:
+// - seal(): заборонити додавання/видалення, значення міняти можна
+// - preventExtensions(): заборонити лише додавання нових властивостей
+// - freeze() ⊂ seal() ⊂ preventExtensions() — кожен рівень суворіший
+// - усі три — SHALLOW, і "зняти" їх назад неможливо (лише новий об'єкт)
+// - Object.is(): як ===, але коректно розрізняє NaN і +0/-0
+// - Object.groupBy(): групує iterable у null-прототипний об'єкт
+//   { ключ: [елементи] } за результатом колбека; Map.groupBy() — те саме в Map
+// - hasOwnProperty/isPrototypeOf/propertyIsEnumerable — методи
+//   інтроспекції власних властивостей і ланцюжка прototипів
+// - toString()/toLocaleString()/valueOf() — неявно викликаються
+//   рушієм під час приведення об'єкта до рядка/числа (ToPrimitive)
