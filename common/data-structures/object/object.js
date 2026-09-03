@@ -1155,3 +1155,126 @@ console.log(Object.getOwnPropertyDescriptor(properClone, "computed"));
 // - можна змішувати data і accessor дескриптори в одному виклику
 // - у парі з Object.getOwnPropertyDescriptors() дає точне клонування
 //   об'єкта разом з геттерами/сеттерами і прапорцями
+
+
+// ==========================================================================
+// Object.getOwnPropertyNames() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.getOwnPropertyNames(obj) повертає МАСИВ рядків — імен УСІХ
+// власних (own) властивостей об'єкта, ВКЛЮЧНО з non-enumerable,
+// але БЕЗ symbol-ключів. Це головна відмінність від Object.keys().
+
+const namesDemoObj = { visible: "видима" };
+Object.defineProperty(namesDemoObj, "hidden", {
+  value: "прихована",
+  enumerable: false,
+});
+
+console.log(Object.keys(namesDemoObj));            // ["visible"]
+console.log(Object.getOwnPropertyNames(namesDemoObj)); // ["visible", "hidden"]
+// getOwnPropertyNames() бачить і non-enumerable властивість,
+// а Object.keys() — ні
+
+
+// 2. ЧОМУ ЦЕ ВАЖЛИВО: "ПОВНИЙ" СПИСОК ВЛАСНИХ РЯДКОВИХ КЛЮЧІВ
+// -----------------------------------------------------
+// Object.keys()               → лише own + enumerable
+// Object.getOwnPropertyNames()→ own + enumerable І non-enumerable
+//                                (але тільки рядкові ключі, без symbol)
+// Reflect.ownKeys()           → own + enumerable + non-enumerable
+//                                + symbol-ключі (найповніший варіант)
+
+
+// 3. ПОРЯДОК КЛЮЧІВ — ТІ САМІ ПРАВИЛА, ЩО Й У Object.keys()
+// -----------------------------------------------------
+// Спочатку integer-like ключі за зростанням, потім рядкові —
+// у порядку додавання (insertion order).
+
+const orderedNamesObj = { b: 1, 2: "два", a: 2, 1: "один" };
+console.log(Object.getOwnPropertyNames(orderedNamesObj));
+// ["1", "2", "b", "a"]
+
+
+// 4. МАСИВИ: ПОБАЧИТИ СЛУЖБОВУ ВЛАСТИВІСТЬ "length"
+// -----------------------------------------------------
+// У масивів властивість length технічно існує, але вона
+// non-enumerable — тому Object.keys() її не показує, а
+// getOwnPropertyNames() — показує.
+
+const arrForNames = ["x", "y", "z"];
+console.log(Object.keys(arrForNames));             // ["0", "1", "2"]
+console.log(Object.getOwnPropertyNames(arrForNames)); // ["0", "1", "2", "length"]
+
+
+// 5. НАЙЧАСТІШЕ ЗАСТОСУВАННЯ — ІНТРОСПЕКЦІЯ (ОБХІД БЕЗ ФІЛЬТРАЦІЇ)
+// -----------------------------------------------------
+// Використовують, коли треба побачити СПРАВЖНЮ повну "анатомію"
+// об'єкта — наприклад, для дебагу, для написання утиліт
+// серіалізації/клонування, або для перевірки, чи є на об'єкті
+// службові/приховані поля.
+
+function inspectObject(obj) {
+  Object.getOwnPropertyNames(obj).forEach((key) => {
+    const descriptor = Object.getOwnPropertyDescriptor(obj, key);
+    console.log(key, "→", descriptor);
+  });
+}
+inspectObject(namesDemoObj);
+// visible → { value: 'видима', writable: true, enumerable: true, configurable: true }
+// hidden  → { value: 'прихована', writable: false, enumerable: false, configurable: false }
+
+
+// 6. КЛАСИ Й МЕТОДИ ПРОТОТИПУ — ЧОМУ ВОНИ NON-ENUMERABLE
+// -----------------------------------------------------
+// Методи, оголошені в тілі class, за специфікацією є
+// non-enumerable — саме тому їх не видно через Object.keys(instance)
+// чи for...in, але видно через getOwnPropertyNames() на прототипі.
+
+class ExampleClass {
+  method() {}
+}
+console.log(Object.keys(ExampleClass.prototype));               // []
+console.log(Object.getOwnPropertyNames(ExampleClass.prototype));
+// ["constructor", "method"]
+
+
+// 7. НЕ ВКЛЮЧАЄ УСПАДКОВАНІ ВЛАСТИВОСТІ (як і keys/values/entries)
+// -----------------------------------------------------
+const protoForNames = { fromProto: "з прототипу" };
+const ownForNames = Object.create(protoForNames);
+ownForNames.own = "власна";
+console.log(Object.getOwnPropertyNames(ownForNames)); // ["own"]
+
+
+// 8. "МЕЖОВІ" ЗНАЧЕННЯ
+// -----------------------------------------------------
+console.log(Object.getOwnPropertyNames({})); // []
+console.log(Object.getOwnPropertyNames("ab")); // ["0", "1", "length"]
+// Object.getOwnPropertyNames(null); // TypeError: Cannot convert undefined or null to object
+
+
+// 9. ПОРІВНЯННЯ ЗІ SYMBOL-ВЕРСІЄЮ
+// -----------------------------------------------------
+// Якщо потрібні лише symbol-ключі об'єкта — існує "симетричний"
+// метод Object.getOwnPropertySymbols() (розбираємо окремо далі).
+// А якщо потрібні ОБИДВА типи ключів одразу (рядкові + symbol,
+// enumerable + non-enumerable) — використовують Reflect.ownKeys().
+
+const symKeyForNames = Symbol("meta");
+const objWithBoth = { regular: 1, [symKeyForNames]: 2 };
+console.log(Object.getOwnPropertyNames(objWithBoth)); // ["regular"] — symbol пропущено
+console.log(Reflect.ownKeys(objWithBoth)); // ["regular", Symbol(meta)] — усе разом
+
+
+// ПІДСУМОК:
+// - повертає масив ВСІХ власних рядкових ключів — enumerable І non-enumerable
+// - НЕ включає symbol-ключі (для них — Object.getOwnPropertySymbols())
+// - НЕ включає успадковані з прототипу властивості
+// - порядок ключів: integer-like за зростанням → рядкові за insertion order
+// - показує "службові" non-enumerable властивості (length масиву,
+//   методи класу на прототипі тощо) — на відміну від Object.keys()
+// - найповніший варіант обходу власних ключів обох типів — Reflect.ownKeys()
+// - типове застосування: інтроспекція/дебаг, повний обхід структури об'єкта
