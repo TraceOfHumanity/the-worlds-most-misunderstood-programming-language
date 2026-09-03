@@ -1425,3 +1425,153 @@ console.log(Reflect.ownKeys(objWithSymbols)); // те саме, одним ви�
 //   визначені прямо на об'єкті
 // - НЕ включає успадковані symbol-ключі з прототипу
 // - для повного списку всіх ключів (рядкові + symbol) — Reflect.ownKeys()
+
+
+// ==========================================================================
+// Object.getOwnPropertyDescriptor() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.getOwnPropertyDescriptor(obj, propName) повертає ОБ'ЄКТ-
+// дескриптор ОДНІЄЇ конкретної власної (own) властивості — тобто
+// показує, ЯК саме ця властивість налаштована "під капотом".
+// Це логічна протилежність до Object.defineProperty(): один метод
+// ЗАПИСУЄ дескриптор, інший — ЧИТАЄ його назад.
+
+const descriptorDemoObj = { name: "John" };
+console.log(Object.getOwnPropertyDescriptor(descriptorDemoObj, "name"));
+// { value: 'John', writable: true, enumerable: true, configurable: true }
+// саме такі прапорці отримує властивість при звичайному присвоєнні obj.prop = value
+
+
+// 2. DATA DESCRIPTOR ПРИ ЧИТАННІ
+// -----------------------------------------------------
+// Для "звичайної" властивості (не геттера/сеттера) повертається
+// data descriptor з полями: value, writable, enumerable, configurable.
+
+const preciseDescObj = {};
+Object.defineProperty(preciseDescObj, "version", {
+  value: "1.0.0",
+  writable: false,
+  enumerable: true,
+  configurable: false,
+});
+console.log(Object.getOwnPropertyDescriptor(preciseDescObj, "version"));
+// { value: '1.0.0', writable: false, enumerable: true, configurable: false }
+
+
+// 3. ACCESSOR DESCRIPTOR ПРИ ЧИТАННІ
+// -----------------------------------------------------
+// Для властивості-геттера/сеттера повертається accessor descriptor —
+// з полями get, set (замість value, writable). ВАЖЛИВО: get/set тут —
+// самі ФУНКЦІЇ (посилання), метод НЕ викликає геттер, щоб дізнатись значення.
+
+const accessorDescObj = {
+  get computed() {
+    return 42;
+  },
+};
+console.log(Object.getOwnPropertyDescriptor(accessorDescObj, "computed"));
+// { get: [Function: get computed], set: undefined, enumerable: true, configurable: true }
+// зверни увагу: НІЯКОГО value тут немає — це вже інший тип дескриптора
+
+
+// 4. ЯК ВІДРІЗНИТИ DATA ВІД ACCESSOR ДЕСКРИПТОРА ПРОГРАМНО
+// -----------------------------------------------------
+function isAccessorProperty(obj, propName) {
+  const descriptor = Object.getOwnPropertyDescriptor(obj, propName);
+  return descriptor !== undefined && ("get" in descriptor || "set" in descriptor);
+}
+console.log(isAccessorProperty(accessorDescObj, "computed")); // true
+console.log(isAccessorProperty(descriptorDemoObj, "name"));   // false
+
+
+// 5. ПОВЕРТАЄ undefined, ЯКЩО ВЛАСТИВОСТІ НЕМАЄ (own)
+// -----------------------------------------------------
+// Метод НЕ кидає помилку для відсутньої властивості — просто
+// повертає undefined. Це стосується і властивостей з прототипу —
+// метод дивиться ЛИШЕ на власні (own) властивості.
+
+console.log(Object.getOwnPropertyDescriptor(descriptorDemoObj, "nonExistent")); // undefined
+
+const protoForDescriptor = { fromProto: "з прототипу" };
+const ownForDescriptor = Object.create(protoForDescriptor);
+console.log(Object.getOwnPropertyDescriptor(ownForDescriptor, "fromProto")); // undefined
+// хоча ownForDescriptor.fromProto доступне через прототип,
+// дескриптор саме ВЛАСНОЇ властивості з такою назвою відсутній
+
+
+// 6. ЧОМУ ЦЕ НАДІЙНІШЕ, НІЖ ПРОСТО ЧИТАТИ ЗНАЧЕННЯ obj[prop]
+// -----------------------------------------------------
+// Просте звернення obj.prop не покаже:
+//   - чи це геттер, і чи має він побічні ефекти при виклику;
+//   - чи властивість взагалі writable/enumerable/configurable;
+//   - чи властивість "своя", чи прийшла з прототипу.
+// getOwnPropertyDescriptor() дає повну, ТОЧНУ інформацію без
+// побічних ефектів (геттер НЕ викликається під час перевірки).
+
+const loggingGetterObj = {
+  get value() {
+    console.log("геттер викликано!"); // побічний ефект
+    return Math.random();
+  },
+};
+loggingGetterObj.value; // "геттер викликано!" — value прочитано, геттер спрацював
+Object.getOwnPropertyDescriptor(loggingGetterObj, "value"); // тихо, без побічних ефектів
+
+
+// 7. НАЙЧАСТІШЕ ЗАСТОСУВАННЯ
+// -----------------------------------------------------
+// - перевірка, чи можна безпечно перезаписати/видалити властивість,
+//   перед тим, як це робити:
+function canOverwrite(obj, propName) {
+  const descriptor = Object.getOwnPropertyDescriptor(obj, propName);
+  return descriptor === undefined || (descriptor.writable && descriptor.configurable);
+}
+console.log(canOverwrite(preciseDescObj, "version")); // false — заморожена
+
+// - написання власних утиліт клонування/серіалізації, які повинні
+//   зберегти геттери/сеттери, а не "сплющити" їх у значення
+//   (саме так побудований Object.getOwnPropertyDescriptors(), який
+//   розбираємо наступним)
+
+// - дебаг/інтроспекція: подивитись, ЯК саме влаштована конкретна
+//   властивість стороннього об'єкта чи бібліотеки
+
+
+// 8. "МЕЖОВІ" ЗНАЧЕННЯ
+// -----------------------------------------------------
+console.log(Object.getOwnPropertyDescriptor({}, "anything")); // undefined
+// Object.getOwnPropertyDescriptor(null, "x"); // TypeError: Cannot convert undefined or null to object
+
+
+// 9. РОБОТА З SYMBOL-КЛЮЧАМИ
+// -----------------------------------------------------
+// propName може бути не лише рядком, а й символом — метод однаково
+// працює і для symbol-властивостей.
+
+const symKeyForDescriptor = Symbol("secret");
+const objWithSymbolProp = { [symKeyForDescriptor]: "таємне значення" };
+console.log(Object.getOwnPropertyDescriptor(objWithSymbolProp, symKeyForDescriptor));
+// { value: 'таємне значення', writable: true, enumerable: true, configurable: true }
+
+
+// 10. ПОРІВНЯННЯ З ІНШИМИ getOwnProperty*-МЕТОДАМИ
+// -----------------------------------------------------
+// - getOwnPropertyNames(obj)              → усі власні рядкові КЛЮЧІ
+// - getOwnPropertySymbols(obj)            → усі власні symbol-КЛЮЧІ
+// - getOwnPropertyDescriptor(obj, key)    → ДЕСКРИПТОР однієї конкретної властивості
+// - getOwnPropertyDescriptors(obj)        → ДЕСКРИПТОРИ УСІХ власних властивостей одразу
+//   (розбираємо в наступному розділі)
+
+
+// ПІДСУМОК:
+// - повертає повний дескриптор ОДНІЄЇ власної властивості (або undefined)
+// - для звичайної властивості: { value, writable, enumerable, configurable }
+// - для геттера/сеттера: { get, set, enumerable, configurable } — БЕЗ виклику геттера
+// - дивиться ЛИШЕ на власні (own) властивості — з прототипу нічого не бере
+// - не має побічних ефектів (на відміну від obj.prop, який викликає геттер)
+// - працює і з рядковими, і з symbol-ключами
+// - типове застосування: перевірка writable/configurable перед зміною,
+//   написання утиліт клонування/серіалізації, дебаг
