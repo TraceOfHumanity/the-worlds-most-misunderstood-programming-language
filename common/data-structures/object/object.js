@@ -158,7 +158,7 @@ console.log(singleton.increment()); // 2
 // --- СТАТИЧНІ МЕТОДИ (Object.methodName(...)) ---
 
 // Робота з властивостями
-// Object.keys() — див. детальний розбір нижче
+// Object.keys()
 // Object.values()
 // Object.entries()
 // Object.fromEntries()
@@ -170,7 +170,7 @@ console.log(singleton.increment()); // 2
 // Object.getOwnPropertyDescriptor()
 // Object.getOwnPropertyDescriptors()
 // Object.hasOwn()
-
+  
 // Створення об'єктів і робота з прототипами
 // Object.create()
 // Object.getPrototypeOf()
@@ -349,3 +349,127 @@ console.log(isEmptyObject({ a: 1 })); // false
 // - працює з масивами (повертає індекси-рядки) і з примітивами-обгортками
 // - null/undefined → TypeError
 // - головне застосування: ітерація по властивостях об'єкта
+
+
+// ==========================================================================
+// Object.values() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.values(obj) повертає МАСИВ значень ВЛАСНИХ (own)
+// перелічуваних (enumerable) властивостей об'єкта. По суті —
+// "сестра" Object.keys(), але замість ключів повертає значення.
+
+const userValues = { name: "John", age: 30, city: "Kyiv" };
+console.log(Object.values(userValues)); // ["John", 30, "Kyiv"]
+
+
+// 2. ПОРЯДОК ЗНАЧЕНЬ ЗБІГАЄТЬСЯ З ПОРЯДКОМ Object.keys()
+// -----------------------------------------------------
+// Значення йдуть у ТОМУ Ж порядку, що й ключі з Object.keys():
+// спочатку числові ключі за зростанням, потім рядкові за порядком
+// додавання (insertion order).
+
+const orderedValuesObj = { b: "два-Б", 2: "два", a: "два-А", 1: "один" };
+console.log(Object.keys(orderedValuesObj));   // ["1", "2", "b", "a"]
+console.log(Object.values(orderedValuesObj)); // ["один", "два", "два-Б", "два-А"]
+// values[i] відповідає keys[i] — порядок завжди узгоджений
+
+
+// 3. "ВЛАСНІ" (OWN) — НЕ УСПАДКОВАНІ ЗНАЧЕННЯ
+// -----------------------------------------------------
+// Так само, як і Object.keys(), значення успадкованих з прототипу
+// властивостей у результат НЕ потрапляють.
+
+const parentForValues = { inherited: "я з прототипу" };
+const childForValues = Object.create(parentForValues);
+childForValues.own = "я власна властивість";
+
+console.log(Object.values(childForValues)); // ["я власна властивість"]
+
+
+// 4. ТІЛЬКИ ENUMERABLE ЗНАЧЕННЯ
+// -----------------------------------------------------
+// Значення non-enumerable властивостей (enumerable: false)
+// у результат не входять — так само, як і в Object.keys().
+
+const withHiddenValue = {};
+Object.defineProperty(withHiddenValue, "visible", {
+  value: "видиме значення",
+  enumerable: true,
+});
+Object.defineProperty(withHiddenValue, "hidden", {
+  value: "приховане значення",
+  enumerable: false,
+});
+console.log(Object.values(withHiddenValue)); // ["видиме значення"]
+
+
+// 5. РОБОТА З МАСИВАМИ
+// -----------------------------------------------------
+// Для масивів Object.values() повертає самі елементи (а не індекси,
+// як це робить Object.keys()) — тобто фактично копію масиву значень.
+
+const arrForValues = ["x", "y", "z"];
+console.log(Object.values(arrForValues)); // ["x", "y", "z"]
+
+
+// 6. ПРИМІТИВИ ТА "МЕЖОВІ" ЗНАЧЕННЯ
+// -----------------------------------------------------
+console.log(Object.values({})); // []
+console.log(Object.values("abc")); // ["a", "b", "c"] — символи рядка
+// Object.values(null); // TypeError: Cannot convert undefined or null to object
+
+
+// 7. ЯКЩО ЗНАЧЕННЯ — ГЕТТЕР (getter)
+// -----------------------------------------------------
+// Object.values() ВИКЛИКАЄ геттер, щоб отримати актуальне значення —
+// на відміну від Object.getOwnPropertyDescriptor(), який повернув би
+// саму функцію-геттер, а не результат її виклику.
+
+const objWithGetter = {
+  _price: 100,
+  get price() {
+    console.log("геттер price викликано");
+    return this._price * 1.2; // наприклад, ціна з ПДВ
+  },
+};
+console.log(Object.values(objWithGetter)); // [100, 120] — геттер спрацював
+
+
+// 8. НАЙЧАСТІШЕ ЗАСТОСУВАННЯ
+// -----------------------------------------------------
+// Коли потрібні саме ЗНАЧЕННЯ об'єкта, а ключі не важливі —
+// наприклад, для підрахунків, пошуку, перевірки умов.
+
+const cart = { apple: 3, banana: 5, orange: 2 };
+
+// сума всіх значень:
+const totalItems = Object.values(cart).reduce((sum, count) => sum + count, 0);
+console.log(totalItems); // 10
+
+// чи є хоч одне значення більше 4:
+console.log(Object.values(cart).some((count) => count > 4)); // true
+
+// максимальне значення:
+console.log(Math.max(...Object.values(cart))); // 5
+
+
+// 9. ПОРІВНЯННЯ З Object.keys() ТА Object.entries()
+// -----------------------------------------------------
+// - Object.keys(obj)    → ["k1", "k2", ...]              лише ключі
+// - Object.values(obj)  → ["v1", "v2", ...]              лише значення
+// - Object.entries(obj) → [["k1","v1"], ["k2","v2"], ...] і ключ, і значення
+// Якщо потрібні одразу і ключ, і значення — краще одразу взяти
+// Object.entries(), а не окремо викликати keys() і values().
+
+
+// ПІДСУМОК:
+// - повертає масив значень власних enumerable властивостей
+// - порядок завжди узгоджений з Object.keys() (той самий обхід)
+// - НЕ включає успадковані та non-enumerable властивості
+// - для геттерів повертає РЕЗУЛЬТАТ виклику геттера, а не саму функцію
+// - працює з масивами (повертає елементи) і з примітивами-обгортками
+// - null/undefined → TypeError
+// - головне застосування: підрахунки/пошук/агрегації по значеннях об'єкта
