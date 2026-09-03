@@ -1907,3 +1907,170 @@ console.log(Object.hasOwn({}, "anything")); // false
 // - НЕ бачить успадковані властивості (на відміну від оператора in)
 // - бачить non-enumerable властивості й symbol-ключі
 // - рекомендований сучасний стандарт замість obj.hasOwnProperty()
+
+
+// ==========================================================================
+// Object.getPrototypeOf() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.getPrototypeOf(obj) повертає ПРОТОТИП переданого об'єкта —
+// тобто той об'єкт, з якого obj успадковує властивості й методи
+// через ланцюжок прототипів ([[Prototype]] / __proto__).
+
+const plainProtoObj = {};
+console.log(Object.getPrototypeOf(plainProtoObj) === Object.prototype); // true
+// звичайний object literal завжди успадковує від Object.prototype
+
+
+// 2. ЩО ТАКЕ "ПРОТОТИП" НАСПРАВДІ
+// -----------------------------------------------------
+// Кожен об'єкт у JS має внутрішній слот [[Prototype]] — посилання
+// на ІНШИЙ об'єкт (або null). Коли рушій шукає властивість, якої
+// немає у самого об'єкта, він іде по ланцюжку [[Prototype]] —
+// саме так, наприклад, obj.toString() працює навіть якщо ти сам
+// ніколи не визначав toString на obj.
+
+console.log(plainProtoObj.toString); // [Function: toString] — знайдено через прототип
+console.log(Object.hasOwn(plainProtoObj, "toString")); // false — це НЕ власна властивість
+
+
+// 3. ЗВ'ЯЗОК З КОНКРЕТНИМИ СПОСОБАМИ СТВОРЕННЯ ОБ'ЄКТА
+// -----------------------------------------------------
+
+// а) object literal / new Object() → прототип: Object.prototype
+console.log(Object.getPrototypeOf({}) === Object.prototype); // true
+
+// б) масив → прототип: Array.prototype (а вже ЙОГО прототип — Object.prototype)
+console.log(Object.getPrototypeOf([]) === Array.prototype); // true
+console.log(Object.getPrototypeOf(Array.prototype) === Object.prototype); // true
+
+// в) Object.create(proto) → прототип: САМЕ ТОЙ proto, що передали
+const customProto = { greet() { return "Привіт!"; } };
+const createdWithCustomProto = Object.create(customProto);
+console.log(Object.getPrototypeOf(createdWithCustomProto) === customProto); // true
+
+// г) Object.create(null) → прототип: null (об'єкт БЕЗ ланцюжка прототипів)
+const noProtoObj = Object.create(null);
+console.log(Object.getPrototypeOf(noProtoObj)); // null
+
+// д) function-конструктор / class → прототип: ФункціяКонструктор.prototype
+function Animal(name) {
+  this.name = name;
+}
+const dog = new Animal("Рекс");
+console.log(Object.getPrototypeOf(dog) === Animal.prototype); // true
+
+class Cat {}
+const cat = new Cat();
+console.log(Object.getPrototypeOf(cat) === Cat.prototype); // true
+
+
+// 4. ЛАНЦЮЖОК ПРОТОТИПІВ (PROTOTYPE CHAIN)
+// -----------------------------------------------------
+// Прототип сам по собі теж є об'єктом і теж має СВІЙ прототип —
+// так утворюється ланцюжок, що завершується на null.
+
+console.log(Object.getPrototypeOf(dog));                       // Animal.prototype
+console.log(Object.getPrototypeOf(Animal.prototype));           // Object.prototype
+console.log(Object.getPrototypeOf(Object.prototype));           // null — кінець ланцюжка
+
+// Функція, що проходить весь ланцюжок і виводить його:
+function printPrototypeChain(obj) {
+  let current = obj;
+  let level = 0;
+  while (current !== null) {
+    console.log("рівень", level, "→", current.constructor?.name ?? current);
+    current = Object.getPrototypeOf(current);
+    level++;
+  }
+}
+printPrototypeChain(dog);
+// рівень 0 → Animal
+// рівень 1 → Object
+// (далі Object.getPrototypeOf(Object.prototype) === null → цикл завершується)
+
+
+// 5. КЛАСИ Й НАСЛІДУВАННЯ (extends)
+// -----------------------------------------------------
+// При extends прототип дочірнього класу вказує на прототип
+// батьківського — саме так дочірні екземпляри отримують доступ
+// до батьківських методів.
+
+class Bird extends Animal {
+  fly() {
+    return `${this.name} летить`;
+  }
+}
+const parrot = new Bird("Папуга");
+console.log(Object.getPrototypeOf(Bird.prototype) === Animal.prototype); // true
+console.log(parrot instanceof Animal); // true — саме завдяки ланцюжку прототипів
+
+
+// 6. Object.getPrototypeOf() vs __proto__
+// -----------------------------------------------------
+// __proto__ — це старий (легасі), нестандартизований спочатку
+// геттер/сеттер, який робить те саме, що getPrototypeOf()/
+// setPrototypeOf(), але через властивість, а не через функцію.
+// Сучасний код повинен використовувати САМЕ статичні методи Object,
+// а не __proto__ — він залишений лише для сумісності зі старим кодом.
+
+console.log(plainProtoObj.__proto__ === Object.getPrototypeOf(plainProtoObj)); // true
+// [!] __proto__ вважається застарілим (legacy) — уникай його в новому коді
+
+
+// 7. ЯК ЦЕ ВІДРІЗНЯЄТЬСЯ ВІД instanceof
+// -----------------------------------------------------
+// instanceof перевіряє, чи є ДАНИЙ прототип десь у ланцюжку
+// (повертає true/false), а getPrototypeOf() дає ДОСТУП до
+// САМОГО об'єкта-прототипу для подальшого аналізу/маніпуляцій.
+
+console.log(dog instanceof Animal); // true — просто перевірка
+console.log(Object.getPrototypeOf(dog)); // сам об'єкт Animal.prototype — можна досліджувати
+
+
+// 8. НАЙЧАСТІШЕ ЗАСТОСУВАННЯ
+// -----------------------------------------------------
+// - визначення "справжнього типу" об'єкта під час дебагу/логування
+function getConstructorName(obj) {
+  const proto = Object.getPrototypeOf(obj);
+  return proto?.constructor?.name ?? "немає прототипу (null)";
+}
+console.log(getConstructorName(dog));       // "Animal"
+console.log(getConstructorName(noProtoObj)); // "немає прототипу (null)"
+
+// - точне (не "сплющене") клонування прототипу разом з даними,
+//   як у Object.create(Object.getPrototypeOf(obj), ...) —
+//   саме так це і використовувалось у розборі shallowClone() вище
+
+// - перевірка одного з ключових інструментів рефлексії/метапрограмування
+//   поряд з Object.setPrototypeOf(), Reflect.getPrototypeOf()
+
+
+// 9. Object.getPrototypeOf() vs Reflect.getPrototypeOf()
+// -----------------------------------------------------
+// Reflect.getPrototypeOf() робить те саме, але кидає TypeError,
+// якщо аргумент — не об'єкт (замість спроби неявно привести
+// примітив до об'єкта). У більшості випадків різниця не критична,
+// Reflect-версію обирають у коді, орієнтованому на метапрограмування
+// (proxy-трапи, рефлексія).
+
+
+// 10. "МЕЖОВІ" ЗНАЧЕННЯ
+// -----------------------------------------------------
+console.log(Object.getPrototypeOf("рядок")); // String.prototype — примітив обгортається
+// Object.getPrototypeOf(null); // TypeError: Cannot convert undefined or null to object
+
+
+// ПІДСУМОК:
+// - повертає прототип об'єкта — той об'єкт, з якого obj успадковує
+//   властивості й методи через внутрішній слот [[Prototype]]
+// - {}/new Object() → Object.prototype; [] → Array.prototype;
+//   Object.create(proto) → саме proto; Object.create(null) → null;
+//   new Конструктор() / new Клас() → Конструктор.prototype / Клас.prototype
+// - прототипи утворюють ЛАНЦЮЖОК, що завершується на null
+// - сучасна заміна застарілого obj.__proto__
+// - при extends прототип дочірнього класу вказує на прототип батьківського
+// - типове застосування: інтроспекція/дебаг типу об'єкта, точне
+//   клонування зі збереженням прототипу, метапрограмування
