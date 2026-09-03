@@ -1748,3 +1748,162 @@ console.log(Object.getOwnPropertyDescriptors({})); // {}
 // - зручний для коректної реалізації mixin-патерну
 // - типове застосування: точне клонування об'єктів, mixins,
 //   збереження/перенесення повної "структури" властивостей
+
+
+// ==========================================================================
+// Object.hasOwn() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.hasOwn(obj, propName) повертає true/false — чи має obj
+// ВЛАСНУ (own) властивість з таким ім'ям (рядковим або symbol),
+// НЕЗАЛЕЖНО від того, enumerable вона чи ні. Це СУЧАСНА (ES2022)
+// заміна для obj.hasOwnProperty(propName).
+
+const hasOwnDemoObj = { name: "John" };
+console.log(Object.hasOwn(hasOwnDemoObj, "name"));   // true
+console.log(Object.hasOwn(hasOwnDemoObj, "toString")); // false — toString з прототипу
+
+
+// 2. ЧОМУ ЦЕ ЗАМІНА ДЛЯ obj.hasOwnProperty()
+// -----------------------------------------------------
+// Раніше для цієї перевірки використовували метод екземпляра:
+console.log(hasOwnDemoObj.hasOwnProperty("name")); // true — той самий результат
+
+// Проблема методу-екземпляра: він успадковується через прототип,
+// і якщо ЦЕЙ конкретний об'єкт (чи щось у його ланцюжку прототипів)
+// перевизначив hasOwnProperty — виклик зламається.
+const brokenHasOwnProperty = { hasOwnProperty: "я не функція!" };
+// brokenHasOwnProperty.hasOwnProperty("x"); // TypeError: hasOwnProperty is not a function
+console.log(Object.hasOwn(brokenHasOwnProperty, "hasOwnProperty")); // true — а так все ок
+
+
+// 3. НАЙБІЛЬШ КЛАСИЧНА ПРОБЛЕМА: Object.create(null)
+// -----------------------------------------------------
+// Об'єкти без прототипу (створені через Object.create(null)) взагалі
+// НЕ МАЮТЬ методу hasOwnProperty — виклик obj.hasOwnProperty() кине
+// TypeError. Object.hasOwn() — це СТАТИЧНИЙ метод, тому він працює
+// для БУДЬ-ЯКОГО об'єкта, незалежно від його прототипу.
+
+const dictObj = Object.create(null);
+dictObj.key = "value";
+// dictObj.hasOwnProperty("key"); // TypeError: dictObj.hasOwnProperty is not a function
+console.log(Object.hasOwn(dictObj, "key")); // true — працює завжди
+
+
+// 4. РАНІШЕ ЦЮ ПРОБЛЕМУ ОБХОДИЛИ ЧЕРЕЗ .call()
+// -----------------------------------------------------
+// До появи Object.hasOwn() (ES2022) "безпечним" способом вважали
+// виклик hasOwnProperty напряму з Object.prototype через .call():
+
+console.log(Object.prototype.hasOwnProperty.call(dictObj, "key")); // true
+// Object.hasOwn(dictObj, "key") робить те саме, але коротше й читабельніше
+
+
+// 5. РІЗНИЦЯ МІЖ "МАЄ ВЛАСНУ ВЛАСТИВІСТЬ" І "ЗНАЧЕННЯ НЕ undefined"
+// -----------------------------------------------------
+// Object.hasOwn() перевіряє САМ ФАКТ ІСНУВАННЯ властивості,
+// а не те, чи її значення "порожнє". Це критична відмінність
+// від перевірки типу `if (obj.prop)` чи `if (obj.prop !== undefined)`.
+
+const objWithFalsyValues = {
+  zero: 0,
+  emptyString: "",
+  explicitUndefined: undefined,
+  isFalse: false,
+};
+
+console.log(Object.hasOwn(objWithFalsyValues, "zero"));             // true — властивість існує
+console.log(objWithFalsyValues.zero ? "є" : "немає");                // "немає" — 0 хибне (falsy)!
+
+console.log(Object.hasOwn(objWithFalsyValues, "explicitUndefined")); // true — властивість ІСНУЄ
+console.log(objWithFalsyValues.explicitUndefined !== undefined);     // false — а значення дійсно undefined
+
+console.log(Object.hasOwn(objWithFalsyValues, "neverDeclared"));     // false — а цієї властивості взагалі немає
+console.log(objWithFalsyValues.neverDeclared !== undefined);         // false — той самий результат, що й вище!
+// ^ саме тому перевірка "!== undefined" НЕНАДІЙНА — вона не розрізняє
+// "властивості немає" від "властивість є, але дорівнює undefined"
+
+
+// 6. ВІДРІЗНЯЄ "ВЛАСНУ" ВІД "УСПАДКОВАНОЇ" — на відміну від `in`
+// -----------------------------------------------------
+// Оператор `in` перевіряє наявність властивості В УСЬОМУ ланцюжку
+// прототипів (включно з успадкованими), а Object.hasOwn() —
+// ТІЛЬКИ власні (own) властивості самого об'єкта.
+
+const protoForHasOwn = { fromProto: "з прототипу" };
+const ownForHasOwn = Object.create(protoForHasOwn);
+ownForHasOwn.own = "власна";
+
+console.log("fromProto" in ownForHasOwn);          // true — `in` бачить прототип
+console.log(Object.hasOwn(ownForHasOwn, "fromProto")); // false — а hasOwn — ні
+console.log(Object.hasOwn(ownForHasOwn, "own"));       // true
+
+
+// 7. ПЕРЕВІРЯЄ NON-ENUMERABLE ТА SYMBOL-КЛЮЧІ ТЕЖ
+// -----------------------------------------------------
+// Так само, як і hasOwnProperty(), Object.hasOwn() бачить
+// non-enumerable властивості (на відміну від Object.keys()
+// чи for...in) і працює з symbol-ключами.
+
+const hiddenPropObj = {};
+Object.defineProperty(hiddenPropObj, "secret", {
+  value: 42,
+  enumerable: false,
+});
+console.log(Object.hasOwn(hiddenPropObj, "secret")); // true — навіть прихована
+
+const symKeyForHasOwn = Symbol("id");
+const objWithSymbolForHasOwn = { [symKeyForHasOwn]: 1 };
+console.log(Object.hasOwn(objWithSymbolForHasOwn, symKeyForHasOwn)); // true
+
+
+// 8. НАЙЧАСТІШЕ ЗАСТОСУВАННЯ
+// -----------------------------------------------------
+// - безпечна перевірка наявності ключа перед зверненням до нього
+//   (особливо для об'єктів невідомого/динамічного походження, як
+//   JSON-відповіді з API):
+function getStatusMessage(response) {
+  if (Object.hasOwn(response, "error")) {
+    return `Помилка: ${response.error}`;
+  }
+  return "OK";
+}
+console.log(getStatusMessage({ error: "Не знайдено" })); // "Помилка: Не знайдено"
+console.log(getStatusMessage({ data: [] }));               // "OK"
+
+// - фільтрація ключів у циклі for...in (щоб не зачепити успадковані):
+for (const key in ownForHasOwn) {
+  if (Object.hasOwn(ownForHasOwn, key)) {
+    console.log("власна властивість for...in:", key); // лише "own"
+  }
+}
+
+
+// 9. "МЕЖОВІ" ЗНАЧЕННЯ
+// -----------------------------------------------------
+console.log(Object.hasOwn({}, "anything")); // false
+// Object.hasOwn(null, "x"); // TypeError: Cannot convert undefined or null to object
+
+
+// 10. ПОРІВНЯННЯ СПОСОБІВ ПЕРЕВІРКИ НАЯВНОСТІ ВЛАСТИВОСТІ
+// -----------------------------------------------------
+// - Object.hasOwn(obj, key)        → ВЛАСНА властивість, будь-який об'єкт (РЕКОМЕНДОВАНО)
+// - obj.hasOwnProperty(key)        → ВЛАСНА властивість, але ламається на
+//                                     Object.create(null) чи перевизначеному hasOwnProperty
+// - key in obj                     → ВЛАСНА + УСПАДКОВАНА властивість
+// - obj[key] !== undefined         → НЕНАДІЙНО: плутає "немає властивості"
+//                                     з "властивість дорівнює undefined"
+
+
+// ПІДСУМОК:
+// - Object.hasOwn(obj, key) — сучасний (ES2022), безпечний спосіб
+//   перевірити, чи obj має ВЛАСНУ властивість key
+// - працює для БУДЬ-ЯКОГО об'єкта, включно з Object.create(null)
+//   (на відміну від obj.hasOwnProperty(), який там впаде з TypeError)
+// - перевіряє факт ІСНУВАННЯ властивості, а не "правдивість" значення —
+//   надійніше, ніж obj.prop чи obj.prop !== undefined
+// - НЕ бачить успадковані властивості (на відміну від оператора in)
+// - бачить non-enumerable властивості й symbol-ключі
+// - рекомендований сучасний стандарт замість obj.hasOwnProperty()
