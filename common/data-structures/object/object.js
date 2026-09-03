@@ -999,3 +999,159 @@ console.log(validatedObj.age); // 25
 //   (окрім зміни value, якщо writable:true)
 // - типове застосування: приховані службові поля, обчислювані
 //   властивості, константи на об'єкті, валідація при записі
+
+
+// ==========================================================================
+// Object.defineProperties() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.defineProperties(obj, descriptorsMap) — те саме, що й
+// Object.defineProperty(), але дозволяє визначити/змінити ОДРАЗУ
+// КІЛЬКА властивостей за один виклик. Другий аргумент — це об'єкт,
+// де КЛЮЧІ — імена властивостей, а ЗНАЧЕННЯ — їхні дескриптори.
+// Повертає той самий obj (мутований).
+
+const multiPropObj = {};
+Object.defineProperties(multiPropObj, {
+  id: {
+    value: 1,
+    writable: false,
+    enumerable: true,
+    configurable: false,
+  },
+  name: {
+    value: "Товар",
+    writable: true,
+    enumerable: true,
+    configurable: true,
+  },
+});
+console.log(multiPropObj); // { id: 1, name: 'Товар' }
+
+
+// 2. ФОРМА ДРУГОГО АРГУМЕНТА
+// -----------------------------------------------------
+// { propName1: descriptor1, propName2: descriptor2, ... }
+// Кожен descriptor — звичайний дескриптор властивості (data або
+// accessor), за тими самими правилами, що й в Object.defineProperty():
+// прапорці writable/enumerable/configurable за замовчуванням FALSE,
+// якщо не вказані явно.
+
+
+// 3. МОЖНА ЗМІШУВАТИ DATA І ACCESSOR ДЕСКРИПТОРИ В ОДНОМУ ВИКЛИКУ
+// -----------------------------------------------------
+const mixedDescriptorsObj = {};
+let _celsius = 0;
+
+Object.defineProperties(mixedDescriptorsObj, {
+  // data descriptor
+  unit: {
+    value: "metric",
+    enumerable: true,
+    writable: false,
+    configurable: false,
+  },
+  // accessor descriptor
+  celsius: {
+    get() {
+      return _celsius;
+    },
+    set(value) {
+      _celsius = value;
+    },
+    enumerable: true,
+    configurable: true,
+  },
+  // accessor descriptor, обчислюється на основі іншої властивості
+  fahrenheit: {
+    get() {
+      return _celsius * 1.8 + 32;
+    },
+    set(value) {
+      _celsius = (value - 32) / 1.8;
+    },
+    enumerable: true,
+    configurable: true,
+  },
+});
+
+mixedDescriptorsObj.celsius = 100;
+console.log(mixedDescriptorsObj.fahrenheit); // 212
+mixedDescriptorsObj.fahrenheit = 32;
+console.log(mixedDescriptorsObj.celsius); // 0
+
+
+// 4. ЗАСТОСУВАННЯ ДО ВЖЕ ІСНУЮЧИХ ВЛАСТИВОСТЕЙ
+// -----------------------------------------------------
+// Так само, як і defineProperty(), можна одразу переналаштувати
+// кілька вже наявних властивостей — наприклад, "заморозити" частину
+// полів об'єкта, зробивши їх non-writable/non-enumerable.
+
+const configObjMulti = { host: "localhost", port: 3000, debug: true };
+Object.defineProperties(configObjMulti, {
+  host: { writable: false },
+  port: { writable: false },
+});
+configObjMulti.host = "example.com"; // ігнорується (writable: false)
+configObjMulti.debug = false;         // ок — debug не чіпали
+console.log(configObjMulti); // { host: 'localhost', port: 3000, debug: false }
+
+
+// 5. ГОЛОВНА ВІДМІННІСТЬ ВІД Object.defineProperty()
+// -----------------------------------------------------
+// - Object.defineProperty(obj, "one", descriptor)   → ОДНА властивість
+// - Object.defineProperties(obj, { one: d1, two: d2 }) → БАГАТО властивостей
+// По суті, defineProperties() — це "пакетна" (batch) версія
+// defineProperty(), яка внутрішньо викликає Object.defineProperty()
+// для кожного ключа переданого дескриптор-об'єкта.
+
+
+// 6. ЗВ'ЯЗОК З Object.getOwnPropertyDescriptors()
+// -----------------------------------------------------
+// Ці два методи — пара, що працює в парі (аналогічно entries()/fromEntries()):
+// getOwnPropertyDescriptors() дістає ПОВНИЙ набір дескрипторів об'єкта,
+// а defineProperties() дозволяє застосувати такий набір до іншого об'єкта.
+// Це дає СПРАВЖНЄ клонування об'єкта — з усіма прапорцями й
+// геттерами/сеттерами (на відміну від Object.assign()/spread, які
+// "спрощують" геттери до звичайних значень).
+
+const sourceForClone = {
+  get computed() {
+    return 42;
+  },
+};
+Object.defineProperty(sourceForClone, "hidden", {
+  value: "прихована",
+  enumerable: false,
+});
+
+const properClone = Object.defineProperties(
+  {},
+  Object.getOwnPropertyDescriptors(sourceForClone)
+);
+console.log(Object.getOwnPropertyDescriptor(properClone, "computed"));
+// { get: [Function: get computed], set: undefined, enumerable: true, configurable: true }
+// геттер СКОПІЙОВАНО ЯК ГЕТТЕР, а не викликано і "сплющено" у значення
+
+
+// 7. НАЙЧАСТІШЕ ЗАСТОСУВАННЯ
+// -----------------------------------------------------
+// - масове визначення обчислюваних (get/set) властивостей
+// - масове "замороження" кількох конкретних полів об'єкта
+// - точне (deep-structure-aware) клонування об'єкта разом
+//   з геттерами/сеттерами та прапорцями через getOwnPropertyDescriptors()
+// - створення "публічного API" об'єкта з чіткими правилами доступу
+//   до кожного поля за один прохід, замість кількох окремих
+//   викликів defineProperty()
+
+
+// ПІДСУМОК:
+// - пакетна версія Object.defineProperty(): визначає/змінює
+//   ОДРАЗУ кілька властивостей за один виклик
+// - другий аргумент — мапа { propName: descriptor, ... }
+// - ті самі правила дескрипторів (data/accessor, дефолти false)
+// - можна змішувати data і accessor дескриптори в одному виклику
+// - у парі з Object.getOwnPropertyDescriptors() дає точне клонування
+//   об'єкта разом з геттерами/сеттерами і прапорцями
