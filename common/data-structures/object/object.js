@@ -149,3 +149,53 @@ console.log(singleton.increment()); // 2
 // - JSON.parse()           — створення об'єкта з JSON-рядка
 // - Object.fromEntries()   — створення об'єкта з масиву пар [ключ, значення]
 // - IIFE / singleton       — створення одного об'єкта з приватним станом
+
+
+// ==========================================================================
+// МЕТОДИ OBJECT — повний перелік (розбираємо по черзі)
+// ==========================================================================
+
+// --- СТАТИЧНІ МЕТОДИ (Object.methodName(...)) ---
+
+// Робота з властивостями
+// Object.keys()
+// Object.values()
+// Object.entries()
+// Object.fromEntries()
+// Object.assign()
+// Object.defineProperty()
+// Object.defineProperties()
+// Object.getOwnPropertyNames()
+// Object.getOwnPropertySymbols()
+// Object.getOwnPropertyDescriptor()
+// Object.getOwnPropertyDescriptors()
+// Object.hasOwn()
+
+// Створення об'єктів і робота з прототипами
+// Object.create()
+// Object.getPrototypeOf()
+// Object.setPrototypeOf()
+
+// Обмеження мутацій об'єкта
+// Object.freeze()
+// Object.isFrozen()
+// Object.seal()
+// Object.isSealed()
+// Object.preventExtensions()
+// Object.isExtensible()
+
+// Порівняння
+// Object.is()
+
+// Групування (ES2024)
+// Object.groupBy()
+
+
+// --- МЕТОДИ ЕКЗЕМПЛЯРА (obj.methodName(...), через Object.prototype) ---
+
+// obj.hasOwnProperty()
+// obj.isPrototypeOf()
+// obj.propertyIsEnumerable()
+// obj.toString()
+// obj.toLocaleString()
+// obj.valueOf()
