@@ -1278,3 +1278,150 @@ console.log(Reflect.ownKeys(objWithBoth)); // ["regular", Symbol(meta)] — ус
 //   методи класу на прототипі тощо) — на відміну від Object.keys()
 // - найповніший варіант обходу власних ключів обох типів — Reflect.ownKeys()
 // - типове застосування: інтроспекція/дебаг, повний обхід структури об'єкта
+
+
+// ==========================================================================
+// Object.getOwnPropertySymbols() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.getOwnPropertySymbols(obj) повертає МАСИВ усіх власних (own)
+// symbol-ключів об'єкта. Це "дзеркальна" версія
+// Object.getOwnPropertyNames() — але для symbol-ключів замість рядкових.
+// Включає symbol-ключі НЕЗАЛЕЖНО від того, enumerable вони чи ні.
+
+const idSymbol = Symbol("id");
+const metaSymbol = Symbol("meta");
+
+const objWithSymbols = {
+  regular: "звичайна властивість",
+  [idSymbol]: "значення id",
+};
+Object.defineProperty(objWithSymbols, metaSymbol, {
+  value: "значення meta",
+  enumerable: false,
+});
+
+console.log(Object.getOwnPropertySymbols(objWithSymbols));
+// [Symbol(id), Symbol(meta)] — обидва symbol-ключі, enumerable і ні
+
+
+// 2. НАВІЩО ВЗАГАЛІ ПОТРІБНІ SYMBOL-КЛЮЧІ
+// -----------------------------------------------------
+// Symbol — примітивний тип, кожне значення якого УНІКАЛЬНЕ (навіть
+// Symbol("id") !== Symbol("id")). Symbol-ключі використовують, щоб:
+//   - додати на об'єкт "приховану" властивість, яка НІКОЛИ не
+//     перетнеться з рядковим ключем (навіть випадково);
+//   - реалізувати "напівприватні" внутрішні поля бібліотек;
+//   - визначити спеціальну поведінку об'єкта через well-known
+//     symbols (Symbol.iterator, Symbol.toPrimitive і т.д.)
+
+
+// 3. ЧОМУ ЗВИЧАЙНІ МЕТОДИ ЇХ НЕ БАЧАТЬ
+// -----------------------------------------------------
+// Symbol-ключі СВІДОМО виключені зі "звичайних" способів обходу
+// об'єкта — саме тому вони й підходять для приховування:
+
+console.log(Object.keys(objWithSymbols));              // ["regular"]
+console.log(Object.values(objWithSymbols));             // ["звичайна властивість"]
+console.log(Object.entries(objWithSymbols));            // [["regular", "звичайна властивість"]]
+console.log(Object.getOwnPropertyNames(objWithSymbols)); // ["regular"]
+console.log(JSON.stringify(objWithSymbols));            // {"regular":"звичайна властивість"}
+for (const key in objWithSymbols) {
+  console.log("for...in:", key); // лише "regular"
+}
+console.log({ ...objWithSymbols }); // spread копіює symbol-ключі! (див. пункт 5)
+
+
+// 4. АЛЕ SYMBOL-КЛЮЧІ — НЕ ПРИВАТНІ (це важливо!)
+// -----------------------------------------------------
+// Symbol-ключ НЕ дає справжньої приватності — якщо в когось є
+// посилання на сам symbol, він вільно читає і пише властивість.
+// Крім того, Object.getOwnPropertySymbols() дозволяє "знайти" всі
+// symbol-ключі об'єкта, навіть не маючи посилання на сам символ.
+
+console.log(objWithSymbols[idSymbol]); // "значення id" — прочитати можна легко
+
+// Справжня приватність у класах — це #privateField (hash-поля),
+// вони недоступні навіть через getOwnPropertySymbols().
+
+
+// 5. SYMBOL-КЛЮЧІ ТА Object.assign() / SPREAD
+// -----------------------------------------------------
+// На відміну від Object.keys()/values()/entries(), spread {...obj}
+// і Object.assign() ПЕРЕНОСЯТЬ enumerable symbol-ключі (адже вони
+// орієнтуються на "own + enumerable", а не на тип ключа).
+
+console.log(Object.getOwnPropertySymbols({ ...objWithSymbols }));
+// [Symbol(id)] — idSymbol скопійовано (enumerable: true за замовчуванням),
+// а metaSymbol — НІ, бо його явно зробили enumerable: false
+
+
+// 6. WELL-KNOWN SYMBOLS — ВБУДОВАНІ SYMBOL-КЛЮЧІ ДВИГУНА
+// -----------------------------------------------------
+// JS сам використовує спеціальні symbol-ключі для налаштування
+// поведінки об'єктів "під капотом" (наприклад, Symbol.iterator
+// визначає, як об'єкт поводиться в for...of / spread).
+// getOwnPropertySymbols() покаже і ЇХ, якщо вони визначені
+// БЕЗПОСЕРЕДНЬО на об'єкті (а не успадковані з прототипу).
+
+const iterableObj = {
+  items: [1, 2, 3],
+  [Symbol.iterator]() {
+    let index = 0;
+    const items = this.items;
+    return {
+      next() {
+        return index < items.length
+          ? { value: items[index++], done: false }
+          : { value: undefined, done: true };
+      },
+    };
+  },
+};
+console.log([...iterableObj]); // [1, 2, 3] — власний Symbol.iterator спрацював
+console.log(Object.getOwnPropertySymbols(iterableObj)); // [Symbol(Symbol.iterator)]
+
+
+// 7. НЕ ВКЛЮЧАЄ УСПАДКОВАНІ SYMBOL-КЛЮЧІ (тільки власні)
+// -----------------------------------------------------
+const protoWithSymbol = { [Symbol("fromProto")]: "з прототипу" };
+const childOwnSymbols = Object.create(protoWithSymbol);
+childOwnSymbols[Symbol("own")] = "власний";
+console.log(Object.getOwnPropertySymbols(childOwnSymbols).length); // 1 — лише свій
+
+
+// 8. "МЕЖОВІ" ЗНАЧЕННЯ
+// -----------------------------------------------------
+console.log(Object.getOwnPropertySymbols({})); // []
+// Object.getOwnPropertySymbols(null); // TypeError: Cannot convert undefined or null to object
+
+
+// 9. ПОВНИЙ ОБХІД: SYMBOLS + NAMES РАЗОМ
+// -----------------------------------------------------
+// Якщо потрібні і рядкові, і symbol-ключі об'єкта одночасно —
+// або комбінують ці два методи, або одразу беруть Reflect.ownKeys().
+
+function getAllKeys(obj) {
+  return [
+    ...Object.getOwnPropertyNames(obj),
+    ...Object.getOwnPropertySymbols(obj),
+  ];
+}
+console.log(getAllKeys(objWithSymbols)); // ["regular", Symbol(id), Symbol(meta)]
+console.log(Reflect.ownKeys(objWithSymbols)); // те саме, одним викликом
+
+
+// ПІДСУМОК:
+// - повертає масив усіх ВЛАСНИХ symbol-ключів об'єкта
+// - включає їх незалежно від enumerable (на відміну від keys/values/entries)
+// - symbol-ключі "невидимі" для keys/values/entries/for...in/JSON.stringify/
+//   getOwnPropertyNames — саме тому їх використовують для "прихованих" полів
+// - НЕ дають справжньої приватності — символ можна знайти цим методом
+//   і прочитати значення, знаючи посилання на сам symbol
+// - spread {...obj} і Object.assign() копіюють enumerable symbol-ключі
+// - показує і well-known symbols (Symbol.iterator тощо), якщо вони
+//   визначені прямо на об'єкті
+// - НЕ включає успадковані symbol-ключі з прототипу
+// - для повного списку всіх ключів (рядкові + symbol) — Reflect.ownKeys()
