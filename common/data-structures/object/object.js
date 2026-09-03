@@ -1575,3 +1575,176 @@ console.log(Object.getOwnPropertyDescriptor(objWithSymbolProp, symKeyForDescript
 // - працює і з рядковими, і з symbol-ключами
 // - типове застосування: перевірка writable/configurable перед зміною,
 //   написання утиліт клонування/серіалізації, дебаг
+
+
+// ==========================================================================
+// Object.getOwnPropertyDescriptors() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.getOwnPropertyDescriptors(obj) повертає ОБ'ЄКТ, де КОЖЕН
+// ключ — це ім'я власної (own) властивості вихідного об'єкта,
+// а ЗНАЧЕННЯ — повний дескриптор цієї властивості. По суті — це
+// "множина" з Object.getOwnPropertyDescriptor(), викликаного одразу
+// для КОЖНОЇ власної властивості об'єкта (включно з symbol-ключами
+// та non-enumerable властивостями).
+
+const multiDescObj = { name: "John" };
+Object.defineProperty(multiDescObj, "id", {
+  value: 1,
+  writable: false,
+  enumerable: false,
+  configurable: false,
+});
+
+console.log(Object.getOwnPropertyDescriptors(multiDescObj));
+// {
+//   name: { value: 'John', writable: true, enumerable: true, configurable: true },
+//   id:   { value: 1, writable: false, enumerable: false, configurable: false }
+// }
+
+
+// 2. ГОЛОВНЕ ЗАСТОСУВАННЯ: ТОЧНЕ (SHALLOW) КЛОНУВАННЯ ОБ'ЄКТА
+// -----------------------------------------------------
+// На відміну від Object.assign({}, obj) чи spread {...obj}, які
+// "сплющують" геттери/сеттери у звичайні значення (викликаючи їх
+// один раз і копіюючи РЕЗУЛЬТАТ), пара
+// Object.create() + Object.getOwnPropertyDescriptors() зберігає
+// геттери/сеттери ЯК ГЕТТЕРИ/СЕТТЕРИ, а також усі прапорці
+// (writable/enumerable/configurable) один-в-один.
+
+const sourceWithGetterSetter = {
+  _value: 10,
+  get doubled() {
+    console.log("геттер doubled викликано");
+    return this._value * 2;
+  },
+  set doubled(v) {
+    this._value = v / 2;
+  },
+};
+
+// "наївне" клонування — ГЕТТЕР ВТРАЧАЄТЬСЯ:
+const naiveClone = { ...sourceWithGetterSetter };
+console.log(Object.getOwnPropertyDescriptor(naiveClone, "doubled"));
+// { value: 20, writable: true, enumerable: true, configurable: true } — уже НЕ геттер!
+
+// точне клонування — ГЕТТЕР/СЕТТЕР ЗБЕРЕЖЕНО:
+const preciseClone = Object.defineProperties(
+  {},
+  Object.getOwnPropertyDescriptors(sourceWithGetterSetter)
+);
+console.log(Object.getOwnPropertyDescriptor(preciseClone, "doubled"));
+// { get: [Function: get doubled], set: [Function: set doubled], enumerable: true, configurable: true }
+preciseClone._value = 5;
+console.log(preciseClone.doubled); // "геттер doubled викликано" → 10 (реально перерахувалось)
+
+
+// 3. РЕКОМЕНДОВАНИЙ ПАТЕРН З Object.create()
+// -----------------------------------------------------
+// MDN прямо рекомендує саме цю комбінацію як "правильний" спосіб
+// поверхневого копіювання об'єкта (на відміну від Object.assign()):
+
+function shallowClone(obj) {
+  return Object.create(
+    Object.getPrototypeOf(obj),               // зберігає той самий прототип
+    Object.getOwnPropertyDescriptors(obj)      // зберігає усі властивості з прапорцями
+  );
+}
+const properShallowClone = shallowClone(sourceWithGetterSetter);
+console.log(Object.getPrototypeOf(properShallowClone) === Object.getPrototypeOf(sourceWithGetterSetter)); // true
+
+
+// 4. ЩО ТУТ ВАЖЛИВО: ЦЕ ВСЕ ЩЕ SHALLOW (ПОВЕРХНЕВЕ) КОПІЮВАННЯ
+// -----------------------------------------------------
+// Значення властивостей першого рівня копіюються "як є" — якщо
+// value є об'єктом/масивом, у клоні буде те саме ПОСИЛАННЯ,
+// а не глибока копія (аналогічно Object.assign()/spread).
+
+const nestedForDescriptors = { info: { age: 30 } };
+const shallowClonedNested = Object.create(
+  Object.getPrototypeOf(nestedForDescriptors),
+  Object.getOwnPropertyDescriptors(nestedForDescriptors)
+);
+shallowClonedNested.info.age = 99;
+console.log(nestedForDescriptors.info.age); // 99 — теж змінилось (спільне посилання)
+
+
+// 5. ЗВ'ЯЗОК З Object.defineProperties()
+// -----------------------------------------------------
+// Ці два методи спеціально спроєктовані як пара для запису/читання:
+// getOwnPropertyDescriptors() ЧИТАЄ повний "знімок" (snapshot)
+// усіх властивостей, а defineProperties() ЗАПИСУЄ такий знімок
+// в інший об'єкт — саме так і працює патерн клонування вище.
+
+
+// 6. МІКСИНИ (MIXINS) БЕЗ "СПЛЮЩЕННЯ" ГЕТТЕРІВ
+// -----------------------------------------------------
+// Ще одне типове застосування — коректне додавання методів/геттерів
+// одного об'єкта до іншого (наприклад, реалізація патерну mixin),
+// коли важливо не втратити get/set поведінку.
+
+const canFlyMixin = {
+  fly() {
+    return `${this.name} летить`;
+  },
+};
+const canSwimMixin = {
+  swim() {
+    return `${this.name} пливе`;
+  },
+};
+
+class Duck {
+  constructor(name) {
+    this.name = name;
+  }
+}
+Object.defineProperties(Duck.prototype, {
+  ...Object.getOwnPropertyDescriptors(canFlyMixin),
+  ...Object.getOwnPropertyDescriptors(canSwimMixin),
+});
+
+const duck = new Duck("Кряк");
+console.log(duck.fly());  // "Кряк летить"
+console.log(duck.swim()); // "Кряк пливе"
+
+
+// 7. ВКЛЮЧАЄ NON-ENUMERABLE ТА SYMBOL-КЛЮЧІ
+// -----------------------------------------------------
+// На відміну від Object.assign()/spread (які беруть лише
+// enumerable), getOwnPropertyDescriptors() охоплює ВСІ власні
+// властивості — рядкові й symbol, enumerable і ні — тобто це
+// найповніший "знімок" структури об'єкта.
+
+const symKeyForDescriptors = Symbol("meta");
+const objForFullSnapshot = { visible: 1, [symKeyForDescriptors]: 2 };
+Object.defineProperty(objForFullSnapshot, "hidden", {
+  value: 3,
+  enumerable: false,
+});
+console.log(Object.keys(Object.getOwnPropertyDescriptors(objForFullSnapshot)));
+// ["visible", "hidden"] — рядкові ключі власного знімка...
+console.log(Object.getOwnPropertySymbols(Object.getOwnPropertyDescriptors(objForFullSnapshot)));
+// [Symbol(meta)] — ...і symbol-ключ теж присутній у знімку
+
+
+// 8. "МЕЖОВІ" ЗНАЧЕННЯ
+// -----------------------------------------------------
+console.log(Object.getOwnPropertyDescriptors({})); // {}
+// Object.getOwnPropertyDescriptors(null); // TypeError: Cannot convert undefined or null to object
+
+
+// ПІДСУМОК:
+// - повертає об'єкт { propName: descriptor } для УСІХ власних
+//   властивостей (рядкових і symbol, enumerable і non-enumerable)
+// - у парі з Object.defineProperties()/Object.create() дає
+//   ТОЧНЕ (не "сплющене") поверхневе клонування об'єкта — з
+//   геттерами/сеттерами і всіма прапорцями як є
+// - на відміну від Object.assign()/spread, НЕ викликає геттери
+//   й НЕ втрачає accessor-природу властивостей при клонуванні
+// - все ще shallow copy — вкладені об'єкти копіюються за посиланням
+// - зручний для коректної реалізації mixin-патерну
+// - типове застосування: точне клонування об'єктів, mixins,
+//   збереження/перенесення повної "структури" властивостей
