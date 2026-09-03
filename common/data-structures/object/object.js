@@ -774,3 +774,228 @@ console.log(spreadMerge, assignMerge); // однаковий результат:
 // - null/undefined серед джерел ігноруються, як target — кидають TypeError
 // - типове застосування: злиття опцій/конфігів, розширення this
 // - сучасна альтернатива для клонування/злиття — spread { ...obj }
+
+
+// ==========================================================================
+// Object.defineProperty() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.defineProperty(obj, propName, descriptor) визначає (або
+// змінює) ОДНУ властивість об'єкта, даючи повний контроль над її
+// поведінкою через "дескриптор властивості" — об'єкт з налаштуваннями.
+// Повертає той самий obj (мутований).
+
+const preciseObj = {};
+Object.defineProperty(preciseObj, "id", {
+  value: 1,
+  writable: false,
+  enumerable: true,
+  configurable: false,
+});
+console.log(preciseObj.id); // 1
+
+
+// 2. ЧИМ ЦЕ ВІДРІЗНЯЄТЬСЯ ВІД ЗВИЧАЙНОГО ПРИСВОЄННЯ
+// -----------------------------------------------------
+// Звичайне `obj.prop = value` створює властивість з "гостинними"
+// дефолтами: writable, enumerable, configurable — усі TRUE.
+// Object.defineProperty() дозволяє ЯВНО вказати кожен з цих
+// прапорців (flags), і якщо не вказати — за замовчуванням вони FALSE.
+
+const plainAssign = {};
+plainAssign.a = 1; // writable: true, enumerable: true, configurable: true
+
+const viaDefineProperty = {};
+Object.defineProperty(viaDefineProperty, "a", { value: 1 });
+// тут writable/enumerable/configurable — усі FALSE за замовчуванням!
+console.log(Object.keys(viaDefineProperty)); // [] — властивість НЕ enumerable
+viaDefineProperty.a = 999; // мовчки ігнорується (writable: false)
+console.log(viaDefineProperty.a); // 1
+
+
+// 3. ДВА ТИПИ ДЕСКРИПТОРІВ: DATA DESCRIPTOR і ACCESSOR DESCRIPTOR
+// -----------------------------------------------------
+// Дескриптор буває ОДНОГО з двох видів — не можна змішувати
+// value/writable з get/set в одному дескрипторі.
+
+// --- DATA DESCRIPTOR (звичайна властивість зі значенням) ---
+// value:        саме значення властивості (за замовчуванням undefined)
+// writable:     чи можна змінити value через звичайне присвоєння (default: false)
+// enumerable:   чи властивість з'являється в for...in, Object.keys() і т.д. (default: false)
+// configurable: чи можна видалити властивість або змінити її дескриптор пізніше (default: false)
+
+Object.defineProperty(preciseObj, "readOnlyValue", {
+  value: "не можна змінити",
+  writable: false,
+  enumerable: true,
+  configurable: true,
+});
+
+// --- ACCESSOR DESCRIPTOR (геттер/сеттер) ---
+// get:          функція, яка викликається при ЧИТАННІ властивості
+// set:          функція, яка викликається при ЗАПИСІ властивості
+// enumerable / configurable — ті самі прапорці, що й вище
+
+const accessorObj = {};
+let _internalValue = 0;
+Object.defineProperty(accessorObj, "value", {
+  get() {
+    console.log("читаємо value");
+    return _internalValue;
+  },
+  set(newValue) {
+    console.log("записуємо value =", newValue);
+    _internalValue = newValue;
+  },
+  enumerable: true,
+  configurable: true,
+});
+accessorObj.value = 10; // "записуємо value = 10"
+console.log(accessorObj.value); // "читаємо value" → 10
+
+
+// 4. WRITABLE: false — ЗАХИСТ ВІД ПЕРЕЗАПИСУ ЗНАЧЕННЯ
+// -----------------------------------------------------
+const frozenValueObj = {};
+Object.defineProperty(frozenValueObj, "version", {
+  value: "1.0.0",
+  writable: false,
+  enumerable: true,
+  configurable: true,
+});
+frozenValueObj.version = "2.0.0"; // у нестрогому режимі — мовчки ігнорується
+console.log(frozenValueObj.version); // "1.0.0"
+
+// У СУВОРОМУ РЕЖИМІ (strict mode / модулі / класи) така спроба
+// кидає TypeError замість мовчазного ігнорування:
+(function () {
+  "use strict";
+  try {
+    frozenValueObj.version = "3.0.0";
+  } catch (e) {
+    console.log(e.message); // "Cannot assign to read only property 'version'..."
+  }
+})();
+
+
+// 5. ENUMERABLE: false — ПРИХОВАТИ ВЛАСТИВІСТЬ ВІД ІТЕРАЦІЙ
+// -----------------------------------------------------
+// Класичний прийом для "службових" полів, які повинні існувати
+// на об'єкті, але не повинні "засмічувати" JSON.stringify,
+// Object.keys/values/entries, for...in, spread {...obj}.
+
+const objWithHiddenId = { name: "product" };
+Object.defineProperty(objWithHiddenId, "_internalId", {
+  value: "uuid-123",
+  writable: true,
+  enumerable: false,
+  configurable: true,
+});
+console.log(Object.keys(objWithHiddenId)); // ["name"] — _internalId прихована
+console.log(objWithHiddenId._internalId);  // "uuid-123" — але доступ напряму працює
+console.log(JSON.stringify(objWithHiddenId)); // {"name":"product"} — теж прихована
+console.log({ ...objWithHiddenId }); // { name: "product" } — spread теж не бачить
+
+
+// 6. CONFIGURABLE: false — ЗАХИСТ ВІД ВИДАЛЕННЯ І ПЕРЕВИЗНАЧЕННЯ
+// -----------------------------------------------------
+// Якщо configurable: false, то:
+//   - delete obj.prop не спрацює (мовчки або з TypeError у strict mode);
+//   - повторний виклик Object.defineProperty на цій властивості
+//     кине TypeError, ЯКЩО намагається змінити щось окрім value
+//     (за умови, що writable вже true) — тобто configurable:false
+//     "замикає" структуру властивості майже назавжди.
+
+const lockedProp = {};
+Object.defineProperty(lockedProp, "locked", {
+  value: "мене не можна видалити чи переналаштувати",
+  writable: true,
+  enumerable: true,
+  configurable: false,
+});
+delete lockedProp.locked; // не спрацює
+console.log(lockedProp.locked); // все ще існує
+
+// Object.defineProperty(lockedProp, "locked", { enumerable: false });
+// TypeError: Cannot redefine property: locked
+
+
+// 7. ЗМІНА ІСНУЮЧОЇ ВЛАСТИВОСТІ (не тільки створення нової)
+// -----------------------------------------------------
+// Якщо властивість вже існує і configurable: true, повторний виклик
+// Object.defineProperty() дозволяє змінити її прапорці або значення —
+// при цьому НЕ вказані в новому дескрипторі поля залишаються
+// такими, якими були (а не скидаються на дефолти).
+
+const reconfigurable = { visible: "спочатку видима" };
+Object.defineProperty(reconfigurable, "visible", { enumerable: false });
+console.log(Object.keys(reconfigurable)); // [] — тепер прихована,
+console.log(reconfigurable.visible);      // "спочатку видима" — value не чіпали
+
+
+// 8. ЧИТАННЯ ДЕСКРИПТОРА НАЗАД
+// -----------------------------------------------------
+// Щоб побачити поточні прапорці властивості, використовують
+// Object.getOwnPropertyDescriptor() (детально — в окремому розділі).
+
+console.log(Object.getOwnPropertyDescriptor(preciseObj, "id"));
+// { value: 1, writable: false, enumerable: true, configurable: false }
+
+
+// 9. ТИПОВІ ЗАСТОСУВАННЯ
+// -----------------------------------------------------
+// - створення справжніх приватних/службових полів (enumerable: false)
+// - створення обчислюваних (computed) властивостей через get/set
+// - створення констант на об'єкті (writable: false, configurable: false)
+// - реалізація патерну "реактивність" (Vue 2 саме так відстежував
+//   зміни властивостей — через Object.defineProperty з get/set)
+// - валідація значення при записі (через set):
+
+const validatedObj = {};
+let _age = 0;
+Object.defineProperty(validatedObj, "age", {
+  get() {
+    return _age;
+  },
+  set(newAge) {
+    if (typeof newAge !== "number" || newAge < 0) {
+      throw new RangeError("Вік має бути невід'ємним числом");
+    }
+    _age = newAge;
+  },
+  enumerable: true,
+  configurable: true,
+});
+validatedObj.age = 25;
+console.log(validatedObj.age); // 25
+// validatedObj.age = -5; // RangeError: Вік має бути невід'ємним числом
+
+
+// 10. ПОРІВНЯННЯ З object literal / звичайним присвоєнням
+// -----------------------------------------------------
+// - obj.prop = value              → просто, але без контролю над
+//                                    writable/enumerable/configurable
+//                                    (усі стають true за замовчуванням)
+// - Object.defineProperty(...)    → повний контроль, але прапорці
+//                                    за замовчуванням FALSE, якщо
+//                                    їх явно не вказати
+// - клас з get/set у тілі         → синтаксичний цукор над accessor
+//                                    descriptor'ами, декларативніший
+//                                    спосіб зробити те саме
+
+
+// ПІДСУМОК:
+// - визначає/змінює ОДНУ властивість з повним контролем через дескриптор
+// - дескриптор буває data (value/writable) АБО accessor (get/set) —
+//   не можна змішувати в одному виклику
+// - прапорці writable/enumerable/configurable за замовчуванням FALSE
+//   (на відміну від звичайного присвоєння, де вони всі TRUE)
+// - writable:false     → заборонено змінювати value
+// - enumerable:false   → властивість не видно в keys/values/entries/
+//   for...in/JSON.stringify/spread
+// - configurable:false → заборонено видаляти й переналаштовувати
+//   (окрім зміни value, якщо writable:true)
+// - типове застосування: приховані службові поля, обчислювані
+//   властивості, константи на об'єкті, валідація при записі
