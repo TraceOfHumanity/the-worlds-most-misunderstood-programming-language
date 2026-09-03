@@ -473,3 +473,146 @@ console.log(Math.max(...Object.values(cart))); // 5
 // - працює з масивами (повертає елементи) і з примітивами-обгортками
 // - null/undefined → TypeError
 // - головне застосування: підрахунки/пошук/агрегації по значеннях об'єкта
+
+
+// ==========================================================================
+// Object.entries() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.entries(obj) повертає МАСИВ пар [ключ, значення] для
+// ВЛАСНИХ (own) перелічуваних (enumerable) властивостей об'єкта.
+// Кожен елемент результату — це масив із двох елементів: [key, value].
+
+const userEntries = { name: "John", age: 30, city: "Kyiv" };
+console.log(Object.entries(userEntries));
+// [["name","John"], ["age",30], ["city","Kyiv"]]
+
+
+// 2. ПО СУТІ — ОБ'ЄДНАННЯ Object.keys() ТА Object.values()
+// -----------------------------------------------------
+// Object.entries(obj)[i] === [Object.keys(obj)[i], Object.values(obj)[i]]
+// Порядок пар той самий, що й порядок обходу в keys()/values():
+// спочатку числові ключі за зростанням, потім рядкові за insertion order.
+
+const orderedEntriesObj = { b: 1, 2: "два", a: 2, 1: "один" };
+console.log(Object.entries(orderedEntriesObj));
+// [["1","один"], ["2","два"], ["b",1], ["a",2]]
+
+
+// 3. "ВЛАСНІ" ENUMERABLE ПАРИ — ТІ САМІ ПРАВИЛА, ЩО Й У keys()/values()
+// -----------------------------------------------------
+// Успадковані з прототипу та non-enumerable властивості в результат
+// не потрапляють.
+
+const parentForEntries = { inherited: "з прототипу" };
+const childForEntries = Object.create(parentForEntries);
+childForEntries.own = "власна";
+console.log(Object.entries(childForEntries)); // [["own", "власна"]]
+
+
+// 4. НАЙЧАСТІШЕ ЗАСТОСУВАННЯ — ІТЕРАЦІЯ З ДЕСТРУКТУРИЗАЦІЄЮ
+// -----------------------------------------------------
+// Оскільки кожна пара — це масив [key, value], зручно одразу
+// деструктурувати обидва значення прямо в циклі чи в колбеку.
+
+const productForEntries = { title: "Ноутбук", price: 25000, inStock: true };
+
+for (const [key, value] of Object.entries(productForEntries)) {
+  console.log(`${key}: ${value}`);
+}
+// title: Ноутбук
+// price: 25000
+// inStock: true
+
+Object.entries(productForEntries).forEach(([key, value]) => {
+  console.log(key, "->", value);
+});
+
+
+// 5. ПЕРЕТВОРЕННЯ ОБ'ЄКТА ЧЕРЕЗ map/filter (ОБ'ЄКТ → МАСИВ → ОБ'ЄКТ)
+// -----------------------------------------------------
+// Об'єкти самі по собі не мають map/filter, але через entries()
+// їх можна "прогнати" крізь масивні методи, а тоді зібрати назад
+// в об'єкт через Object.fromEntries() — це і є та причина,
+// чому entries() та fromEntries() зазвичай працюють в парі.
+
+const prices = { apple: 10, banana: 20, orange: 30 };
+
+// підняти всі ціни на 10%:
+const pricesWithMarkup = Object.fromEntries(
+  Object.entries(prices).map(([key, value]) => [key, Math.round(value * 1.1)])
+);
+console.log(pricesWithMarkup); // { apple: 11, banana: 22, orange: 33 }
+
+// залишити тільки товари з ціною більше 15:
+const expensiveOnly = Object.fromEntries(
+  Object.entries(prices).filter(([, value]) => value > 15)
+);
+console.log(expensiveOnly); // { banana: 20, orange: 30 }
+
+
+// 6. РОБОТА З МАСИВАМИ
+// -----------------------------------------------------
+// Для масивів entries() повертає пари [індекс, значення]
+// (індекс — у вигляді рядка, як і в keys()).
+
+const arrForEntries = ["x", "y", "z"];
+console.log(Object.entries(arrForEntries));
+// [["0","x"], ["1","y"], ["2","z"]]
+
+
+// 7. ЯКЩО ЗНАЧЕННЯ — ГЕТТЕР
+// -----------------------------------------------------
+// Так само, як і Object.values(), Object.entries() ВИКЛИКАЄ геттер
+// і бере результат його виконання, а не саму функцію-геттер.
+
+const objWithGetterEntries = {
+  _price: 100,
+  get price() {
+    return this._price * 1.2;
+  },
+};
+console.log(Object.entries(objWithGetterEntries));
+// [["_price", 100], ["price", 120]]
+
+
+// 8. "МЕЖОВІ" ЗНАЧЕННЯ
+// -----------------------------------------------------
+console.log(Object.entries({})); // []
+console.log(Object.entries("ab")); // [["0","a"], ["1","b"]]
+// Object.entries(null); // TypeError: Cannot convert undefined or null to object
+
+
+// 9. ЗВОРОТНА ОПЕРАЦІЯ — Object.fromEntries()
+// -----------------------------------------------------
+// Object.fromEntries() — це обернена до Object.entries() операція:
+// масив пар [ключ, значення] → об'єкт. Разом вони утворюють
+// повний цикл "об'єкт → масив пар → трансформація → об'єкт".
+
+const backToObject = Object.fromEntries(Object.entries(userEntries));
+console.log(backToObject); // { name: "John", age: 30, city: "Kyiv" }
+console.log(backToObject !== userEntries); // true — це НОВИЙ об'єкт (shallow copy)
+
+
+// 10. ПОРІВНЯННЯ З Map
+// -----------------------------------------------------
+// Формат [ключ, значення] пар — це той самий формат, який приймає
+// конструктор Map. Тому Object.entries() зручно використовувати
+// для перетворення звичайного об'єкта в Map:
+
+const userMap = new Map(Object.entries(userEntries));
+console.log(userMap.get("name")); // "John"
+console.log(userMap instanceof Map); // true
+
+
+// ПІДСУМОК:
+// - повертає масив пар [ключ, значення] власних enumerable властивостей
+// - порядок узгоджений з Object.keys()/Object.values()
+// - НЕ включає успадковані та non-enumerable властивості
+// - для геттерів повертає результат виклику, а не саму функцію
+// - працює з масивами (пари [індекс, елемент]) і примітивами-обгортками
+// - null/undefined → TypeError
+// - у парі з Object.fromEntries() дозволяє "map/filter" по об'єкту
+// - формат пар сумісний із конструктором Map
