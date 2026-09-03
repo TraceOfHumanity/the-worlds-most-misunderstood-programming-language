@@ -616,3 +616,161 @@ console.log(userMap instanceof Map); // true
 // - null/undefined → TypeError
 // - у парі з Object.fromEntries() дозволяє "map/filter" по об'єкту
 // - формат пар сумісний із конструктором Map
+
+
+// ==========================================================================
+// Object.assign() — детальний розбір
+// ==========================================================================
+
+// 1. ЩО РОБИТЬ
+// -----------------------------------------------------
+// Object.assign(target, ...sources) КОПІЮЄ всі власні перелічувані
+// властивості з одного чи кількох об'єктів-джерел (sources) у
+// цільовий об'єкт (target) і ПОВЕРТАЄ target (той самий, змінений).
+// Це МУТАЦІЯ target, а не створення нового об'єкта "з нуля".
+
+const target1 = { a: 1 };
+const source1 = { b: 2 };
+const result1 = Object.assign(target1, source1);
+console.log(result1);      // { a: 1, b: 2 }
+console.log(result1 === target1); // true — це той самий об'єкт, не копія
+
+
+// 2. ЯК СТВОРИТИ НОВИЙ ОБ'ЄКТ (найпоширеніший патерн)
+// -----------------------------------------------------
+// Щоб не мутувати жоден із джерельних об'єктів, першим аргументом
+// передають ПОРОЖНІЙ об'єкт {} — саме так Object.assign() зазвичай
+// використовують для (поверхневого) клонування/злиття.
+
+const original = { x: 1, y: 2 };
+const clone = Object.assign({}, original);
+clone.x = 100;
+console.log(original.x); // 1 — оригінал не змінився
+console.log(clone.x);    // 100
+
+
+// 3. ЗЛИТТЯ КІЛЬКОХ ДЖЕРЕЛ — ПОРЯДОК МАЄ ЗНАЧЕННЯ
+// -----------------------------------------------------
+// Можна передати скільки завгодно джерел. Властивості з наступних
+// джерел ПЕРЕЗАПИСУЮТЬ однойменні властивості з попередніх
+// (і з самого target), тобто "хто останній — той і переміг".
+
+const merged = Object.assign({}, { a: 1, b: 1 }, { b: 2, c: 2 }, { c: 3 });
+console.log(merged); // { a: 1, b: 2, c: 3 }
+
+
+// 4. ЦЕ SHALLOW COPY (ПОВЕРХНЕВЕ КОПІЮВАННЯ)
+// -----------------------------------------------------
+// Object.assign() копіює значення властивостей ПЕРШОГО РІВНЯ.
+// Якщо значення властивості — об'єкт/масив (reference type),
+// копіюється лише ПОСИЛАННЯ на нього, а не сам вкладений об'єкт.
+
+const nestedSource = { info: { age: 30 } };
+const shallowCopy = Object.assign({}, nestedSource);
+
+shallowCopy.info.age = 99;
+console.log(nestedSource.info.age); // 99 — теж змінилось!
+console.log(shallowCopy.info === nestedSource.info); // true — те саме посилання
+
+// Для глибокого копіювання потрібні інші інструменти:
+// structuredClone(obj), JSON.parse(JSON.stringify(obj)) (з обмеженнями),
+// або рекурсивна функція / бібліотека (lodash.cloneDeep і т.д.)
+
+
+// 5. ЩО САМЕ КОПІЮЄТЬСЯ: OWN + ENUMERABLE (включно з symbol-ключами)
+// -----------------------------------------------------
+// На відміну від Object.keys()/values()/entries(), Object.assign()
+// копіює НЕ ЛИШЕ рядкові, а й SYMBOL-ключі — головне, щоб властивість
+// була власною (own) і перелічуваною (enumerable).
+
+const symKey = Symbol("id");
+const sourceWithSymbol = { [symKey]: 123, regular: "звичайна" };
+const targetWithSymbol = Object.assign({}, sourceWithSymbol);
+console.log(targetWithSymbol[symKey]); // 123 — символ теж скопійований
+
+// Успадковані та non-enumerable властивості НЕ копіюються:
+const protoSource = { fromProto: "з прототипу" };
+const ownSource = Object.create(protoSource);
+ownSource.own = "власна";
+console.log(Object.assign({}, ownSource)); // { own: "власна" } — без fromProto
+
+
+// 6. ВИКОРИСТАННЯ ГЕТТЕРІВ/СЕТТЕРІВ ПІД ЧАС КОПІЮВАННЯ
+// -----------------------------------------------------
+// Object.assign() використовує звичайне присвоєння через [[Set]] —
+// тобто якщо в джерелі є геттер, він БУДЕ викликаний, щоб отримати
+// значення, а якщо в target є сеттер з тим самим ім'ям — спрацює він.
+// Результат — завжди ЗВИЧАЙНА ДАНА властивість (data property) в target,
+// геттери/сеттери самого source в target НЕ переносяться як geттери.
+
+const sourceWithGetter = {
+  get computed() {
+    console.log("геттер викликано");
+    return 42;
+  },
+};
+const plainResult = Object.assign({}, sourceWithGetter);
+console.log(plainResult); // { computed: 42 } — вже звичайне значення, не геттер
+
+
+// 7. ПРОПУСКАЄ null / undefined СЕРЕД ДЖЕРЕЛ (АЛЕ НЕ TARGET)
+// -----------------------------------------------------
+// Якщо джерело — null або undefined, воно просто ігнорується
+// (не кидає помилку). А от якщо null/undefined передати як TARGET
+// (перший аргумент) — буде TypeError.
+
+console.log(Object.assign({}, null, { a: 1 }, undefined)); // { a: 1 }
+// Object.assign(null, { a: 1 }); // TypeError: Cannot convert undefined or null to object
+
+
+// 8. ПРИМІТИВИ ЯК ДЖЕРЕЛА
+// -----------------------------------------------------
+// Примітиви-джерела обгортаються у Wrapper-об'єкт, і копіюються
+// їхні власні перелічувані властивості (для рядка — це символи-індекси).
+
+console.log(Object.assign({}, "abc")); // { 0: "a", 1: "b", 2: "c" }
+
+
+// 9. ТИПОВІ ЗАСТОСУВАННЯ
+// -----------------------------------------------------
+// - злиття конфігів/опцій з дефолтними значеннями:
+function createConfig(userOptions) {
+  const defaults = { theme: "light", fontSize: 14 };
+  return Object.assign({}, defaults, userOptions);
+}
+console.log(createConfig({ fontSize: 18 })); // { theme: "light", fontSize: 18 }
+
+// - додавання властивостей до this всередині конструктора/методу:
+class Widget {
+  constructor(options) {
+    Object.assign(this, { visible: true }, options);
+  }
+}
+console.log(new Widget({ label: "OK" })); // Widget { visible: true, label: "OK" }
+
+
+// 10. ПОРІВНЯННЯ ЗІ SPREAD-ОПЕРАТОРОМ { ...obj }
+// -----------------------------------------------------
+// object spread (ES2018) робить те саме, що Object.assign({}, obj),
+// але це синтаксична конструкція, а не виклик функції, і вона
+// завжди створює НОВИЙ об'єкт (не можна "мутувати" існуючий target).
+
+const spreadMerge = { ...{ a: 1 }, ...{ b: 2 } };
+const assignMerge = Object.assign({}, { a: 1 }, { b: 2 });
+console.log(spreadMerge, assignMerge); // однаковий результат: { a: 1, b: 2 }
+
+// Ключова відмінність: Object.assign() МОЖЕ мутувати переданий target,
+// spread — ніколи (завжди новий об'єкт). У сучасному коді для
+// злиття/клонування частіше обирають spread саме через це.
+
+
+// ПІДСУМОК:
+// - копіює власні enumerable властивості (включно з symbol-ключами)
+//   з джерел у target і повертає МУТОВАНИЙ target
+// - Object.assign({}, ...) — спосіб отримати новий об'єкт без мутації джерел
+// - при кількох джерелах пізніші перезаписують однойменні властивості
+// - це shallow copy — вкладені об'єкти копіюються ЗА ПОСИЛАННЯМ
+// - викликає геттери джерела; в target записує звичайні значення
+// - null/undefined серед джерел ігноруються, як target — кидають TypeError
+// - типове застосування: злиття опцій/конфігів, розширення this
+// - сучасна альтернатива для клонування/злиття — spread { ...obj }
