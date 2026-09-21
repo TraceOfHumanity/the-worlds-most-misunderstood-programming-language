@@ -80,7 +80,7 @@ async function main() {
   // САМЕ ЧЕРЕЗ ЦЕ В РЕАЛЬНИХ ПРОЄКТАХ (build-тули, dev-сервери з
   // hot-reload) ЗАЗВИЧАЙ ВИКОРИСТОВУЮТЬ СТОРОННІ БІБЛІОТЕКИ (chokidar —
   // НАЙПОШИРЕНІША), ЯКІ "ЗГЛАЖУЮТЬ" ЦІ РОЗБІЖНОСТІ Й ДОДАЮТЬ DEBOUNCING
-  // (детально сама ІДЕЯ debounce — common/asynchronous.js, розділ
+  // (детально сама ІДЕЯ debounce — common/asynchronous/asynchronous.js, розділ
   // "DEBOUNCE ДЛЯ АСИНХРОННИХ ВИКЛИКІВ"), А НЕ fs.watch() НАПРЯМУ.
 
 
@@ -123,13 +123,13 @@ async function main() {
 
   // fs/promises ТАКОЖ ДАЄ watch() ЯК АСИНХРОННИЙ ІТЕРАТОР (детально
   // сам механізм for await...of і Symbol.asyncIterator —
-  // common/asynchronous.js, розділ 19) — ЗРУЧНІШЕ ДЛЯ async/await-коду,
+  // common/asynchronous/asynchronous.js, розділ 19) — ЗРУЧНІШЕ ДЛЯ async/await-коду,
   // НІЖ callback-СТИЛЬ ЗВИЧАЙНОГО fs.watch():
 
   await fsPromises.writeFile(demoFilePath, "для async-ітератора");
 
   async function watchWithAsyncIterator() {
-    const ac = new AbortController(); // детально AbortController — common/asynchronous.js, розділ 20
+    const ac = new AbortController(); // детально AbortController — common/asynchronous/asynchronous.js, розділ 20
     const watcher = fsPromises.watch(demoFilePath, { signal: ac.signal });
 
     setTimeout(async () => {

@@ -269,7 +269,7 @@ const withAsyncTiming = (fn) => async (...args) => {
   return result;
 };
 withAsyncTiming(async (x) => x * 2)(21).then((v) => console.log(v)); // async завершено → 42
-// (детально async — common/asynchronous.js)
+// (детально async — common/asynchronous/asynchronous.js)
 
 
 // ==========================================================================

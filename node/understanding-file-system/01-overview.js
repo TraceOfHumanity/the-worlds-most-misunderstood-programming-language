@@ -37,7 +37,7 @@ fs.writeFileSync(demoFilePath, "Початковий вміст");
 // 2.1. CALLBACK-СТИЛЬ — НАЙСТАРІШИЙ, ЩЕ ДО async/await У МОВІ
 // -----------------------------------------------------
 // Кожна функція ПРИЙМАЄ callback ОСТАННІМ аргументом, за конвенцією
-// Node.js "error-first" (детально common/asynchronous.js, розділ 3):
+// Node.js "error-first" (детально common/asynchronous/asynchronous.js, розділ 3):
 // перший параметр callback'а — ПОМИЛКА (або null, якщо все гаразд).
 
 fs.writeFile(demoFilePath, "Привіт, файлова система!", (err) => {
@@ -59,7 +59,7 @@ fs.writeFile(demoFilePath, "Привіт, файлова система!", (err)
 // Функції з суфіксом "Sync" ВИКОНУЮТЬСЯ СИНХРОННО — код ЗУПИНЯЄТЬСЯ
 // на ЦЬОМУ рядку, ПОКИ операція введення/виведення НЕ ЗАВЕРШИТЬСЯ.
 // Це ПРЯМО СУПЕРЕЧИТЬ ідеї Node.js "не блокувати event loop"
-// (детально сама модель — common/asynchronous.js, розділ 0):
+// (детально сама модель — common/asynchronous/asynchronous.js, розділ 0):
 
 const syncContent = fs.readFileSync(demoFilePath, "utf-8"); // ⚠️ БЛОКУЄ тут усе інше
 console.log("Sync-стиль прочитав:", syncContent); // "Початковий вміст" — ЩЕ ДО
@@ -73,13 +73,13 @@ console.log("Sync-стиль прочитав:", syncContent); // "Початк�
 //   - у ОДНОРАЗОВИХ CLI-скриптах, де немає ІНШИХ одночасних задач.
 // У СЕРВЕРІ, ЩО ОБСЛУГОВУЄ БАГАТО ЗАПИТІВ ОДНОЧАСНО, Sync-метод
 // "ЗАМОРОЗИТЬ" ОБРОБКУ ВСІХ ІНШИХ запитів на час операції введення/
-// виведення — Node.js ОДНОПОТОКОВИЙ (детально common/asynchronous.js,
+// виведення — Node.js ОДНОПОТОКОВИЙ (детально common/asynchronous/asynchronous.js,
 // розділ 0), і Sync-виклик БЛОКУЄ ЦЕЙ ЄДИНИЙ потік ПОВНІСТЮ.
 
 // 2.3. PROMISE-СТИЛЬ (fs/promises) — СУЧАСНИЙ, РЕКОМЕНДОВАНИЙ ЗА ЗАМОВЧУВАННЯМ
 // -----------------------------------------------------
 // Той САМИЙ callback-API, АЛЕ КОЖНА функція ПОВЕРТАЄ Promise —
-// ПРИРОДНО ПОЄДНУЄТЬСЯ З async/await (детально common/asynchronous.js,
+// ПРИРОДНО ПОЄДНУЄТЬСЯ З async/await (детально common/asynchronous/asynchronous.js,
 // розділ "СПОСІБ 3: ASYNC/AWAIT"):
 
 const fsPromises = require("fs/promises"); // або: const fsPromises = require("fs").promises;
@@ -106,7 +106,7 @@ readWithPromises();
 // СЬОГОДНІ ДЛЯ НОВОГО КОДУ РЕКОМЕНДУЄТЬСЯ fs/promises + async/await:
 // НЕ БЛОКУЄ event loop (на відміну від Sync), І ЧИТАЄТЬСЯ ЛІНІЙНО,
 // БЕЗ "ПІРАМІДИ" ВКЛАДЕНИХ callback'ів (детально проблема callback
-// hell — common/asynchronous.js, розділ "CALLBACK HELL").
+// hell — common/asynchronous/asynchronous.js, розділ "CALLBACK HELL").
 
 
 // ==========================================================================
@@ -118,7 +118,7 @@ readWithPromises();
 // (libuv thread pool) — ОКРЕМИЙ ВІД ГОЛОВНОГО JS-потоку. Коли операція
 // на диску ЗАВЕРШУЄТЬСЯ, РЕЗУЛЬТАТ "ПОВЕРТАЄТЬСЯ" в event loop ЯК
 // звичайна МАКРОЗАДАЧА (детально мікро/макрозадачі —
-// common/asynchronous.js, розділ 15 "EVENT LOOP"), і ВИКОНУЄТЬСЯ
+// common/asynchronous/asynchronous.js, розділ 15 "EVENT LOOP"), і ВИКОНУЄТЬСЯ
 // callback/резолвиться Promise.
 //
 // САМЕ ТОМУ:

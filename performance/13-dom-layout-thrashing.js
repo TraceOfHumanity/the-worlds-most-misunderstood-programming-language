@@ -151,7 +151,7 @@
 // scroll/resize/mousemove спрацьовують ДЕСЯТКИ-СОТНІ разів на секунду.
 // Якщо в обробнику є layout-READ+WRITE без батчингу — thrashing
 // відбувається на кожен виклик обробника. Комбінуй з debounce/throttle
-// (концептуально той самий підхід, що й у common/asynchronous.js,
+// (концептуально той самий підхід, що й у common/asynchronous/asynchronous.js,
 // розділ "debounceAsync", але тут для синхронних DOM-подій):
 //
 //   let ticking = false;

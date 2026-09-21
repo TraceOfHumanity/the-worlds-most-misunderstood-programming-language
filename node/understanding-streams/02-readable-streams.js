@@ -158,7 +158,7 @@ async function main() {
   // ========================================================================
 
   // Readable РЕАЛІЗУЄ Symbol.asyncIterator (детально сам протокол —
-  // common/asynchronous.js, розділ 19) — ЦЕ ДОЗВОЛЯЄ ОБРОБЛЯТИ STREAM
+  // common/asynchronous/asynchronous.js, розділ 19) — ЦЕ ДОЗВОЛЯЄ ОБРОБЛЯТИ STREAM
   // ЧЕРЕЗ for await...of, БЕЗ callback-ІВ "data"/"end" ВЗАГАЛІ:
 
   const iterableStream = fs.createReadStream(demoFilePath, { encoding: "utf-8", highWaterMark: 4096 });

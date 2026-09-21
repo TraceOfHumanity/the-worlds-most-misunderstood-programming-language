@@ -243,7 +243,7 @@
 //   }
 //
 // АСИНХРОННІ HANDLER'И — Nest РОЗУМІЄ Promise/async-await НАТИВНО
-// (детально механіка самого async/await — common/asynchronous.js):
+// (детально механіка самого async/await — common/asynchronous/asynchronous.js):
 //
 //   @Get(":id")
 //   async findOne(@Param("id") id: string) {

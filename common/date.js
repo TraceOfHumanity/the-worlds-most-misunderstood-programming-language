@@ -407,7 +407,7 @@ console.log(acc); // 4999950000
 
 // console.time / console.timeEnd — зручна обгортка для швидких замірів.
 // Для затримок у коді: setTimeout не гарантує точний час
-// (common/asynchronous.js) — вимірюйте фактичну різницю, а не довіряйте
+// (common/asynchronous/asynchronous.js) — вимірюйте фактичну різницю, а не довіряйте
 // номінальній.
 
 

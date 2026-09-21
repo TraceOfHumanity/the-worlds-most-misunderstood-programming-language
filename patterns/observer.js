@@ -195,7 +195,7 @@ try {
 // 6.4. ПОРЯДОК І СИНХРОННІСТЬ
 // notify синхронний: підписники виконуються один за одним і БЛОКУЮТЬ
 // видавця. Важкі реакції варто виносити в чергу/асинхронність
-// (common/asynchronous.js). Не покладайтесь на порядок підписників.
+// (common/asynchronous/asynchronous.js). Не покладайтесь на порядок підписників.
 
 // 6.5. ПРИХОВАНІ ЗВ'ЯЗКИ
 // Надмірні події роблять потік виконання нечитабельним ("хто саме
@@ -239,7 +239,7 @@ bus.emit("order.paid", 1); // тема без підписників — ніч�
 // ==========================================================================
 
 // - EventTarget/addEventListener у браузері (і в Node) — стандартний
-//   Observer; AbortController зупиняє підписку (common/asynchronous.js).
+//   Observer; AbortController зупиняє підписку (common/asynchronous/asynchronous.js).
 // - RxJS Observable — Observer + потоки даних: map/filter/debounce
 //   над подіями, ліниві, з відписками.
 // - Async iterators: events.on(emitter, "x") дозволяє
