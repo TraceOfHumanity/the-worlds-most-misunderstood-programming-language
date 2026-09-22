@@ -14,6 +14,7 @@
     "express": "^5.1.0"
   },
   "devDependencies": {
+    "@vue/reactivity": "^3.5.43",
     "prettier": "^3.6.2"
   }
 }
