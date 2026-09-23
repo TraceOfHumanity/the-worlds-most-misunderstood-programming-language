@@ -30,12 +30,23 @@
 // ---
 
 const fs = require("fs/promises");
+const { Buffer } = require("buffer");
 
 (async () => {
-  const wather = await fs.watch("./");
-  for await (const event of wather) {
-      if (event.eventType === "change" && event.filename === "commands.txt") {
-        console.log(event);
+  const commandFileHandler = await fs.open("./commands.txt", "r");
+  const watcher = await fs.watch("./commands.txt");
+  for await (const event of watcher) {
+    if (event.eventType === "change") {
+      // console.log(event);
+      const bufferSize = (await commandFileHandler.stat()).size;
+      const buffer = Buffer.alloc(bufferSize);
+      const offset = 0;
+      const length = bufferSize;
+      const position = 0;
+
+      const fileContent = await commandFileHandler.read(buffer, offset, length, position);
+      console.log(fileContent);
     }
   }
+  await commandFileHandler.close();
 })();
