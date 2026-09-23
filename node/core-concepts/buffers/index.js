@@ -241,7 +241,7 @@ console.log(Buffer.compare(bufA, bufB)); // 0 — рівні (від'ємне/д
 //     });
 //   });
 //
-// (детально самі Streams і Http — інші файли в node/streams, node/http)
+// (детально самі Streams і Http — інші файли у node/core-concepts/streams, node/core-concepts/http)
 
 
 // ==========================================================================

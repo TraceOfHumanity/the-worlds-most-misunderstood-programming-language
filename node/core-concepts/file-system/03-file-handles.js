@@ -33,7 +33,7 @@ async function main() {
   await fileHandle.write("Hello file content"); // ASCII — щоб КОЖЕН символ = РІВНО 1 БАЙТ
                                                     // (для кирилиці/емодзі байти й символи
                                                     // НЕ збігаються 1:1 — детально
-                                                    // node/buffers/index.js, розділ 5;
+                                                    // node/core-concepts/buffers/index.js, розділ 5;
                                                     // "розрізати" такий текст ПОСЕРЕД
                                                     // символу за фіксованою кількістю
                                                     // байтів дало б "биту" UTF-8-послідовність)

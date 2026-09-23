@@ -11,7 +11,7 @@
 //   - ШВИДКІ ОБЧИСЛЕННЯ: ділення/множення на степені двійки,
 //     перевірка парності, цілочисельне відсікання;
 //   - БІНАРНІ ДАНІ: протоколи, файлові формати, кольори RGBA, хеші,
-//     криптографія, Buffer/TypedArray (node/buffers/index.js,
+//     криптографія, Buffer/TypedArray (node/core-concepts/buffers/index.js,
 //     common/data-structures/Array/TypedArray.js);
 //   - КОМПАКТНІ СТРУКТУРИ: bitset, маски, Bloom-фільтри;
 //   - алгоритмічні задачі (XOR-трюки, підрахунок бітів).
@@ -288,7 +288,7 @@ console.log(getBit(0b1010, 1), getBit(0b1010, 2)); // 1 0
 
 // Кожен прапорець — окремий біт. Один Number зберігає до 31 (безпечних)
 // булевих значень. Так влаштовані права файлів Unix (fs.constants,
-// node/understanding-file-system/), опції regex, стани в ядрі.
+// node/core-concepts/file-system/), опції regex, стани в ядрі.
 
 const READ = 1 << 0; // 0001
 const WRITE = 1 << 1; // 0010

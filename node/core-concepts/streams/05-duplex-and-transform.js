@@ -61,8 +61,8 @@ async function main() {
   // ЩО ЗАПИСАНО НА ВХІД (_write), ПІСЛЯ ОБРОБКИ АВТОМАТИЧНО
   // З'ЯВЛЯЄТЬСЯ НА ВИХОДІ (ЧЕРЕЗ push() ВСЕРЕДИНІ _transform) —
   // САМЕ ТАК ПРАЦЮЮТЬ zlib.createGzip(), crypto.createCipheriv()
-  // (ДЕТАЛЬНО РЕАЛЬНИЙ ПРИКЛАД ШИФРУВАННЯ — node/streams/encrypt-decrypt/,
-  // ІСНУЮЧИЙ У ЦЬОМУ РЕПОЗИТОРІЇ) — ДАНІ "ПРОХОДЯТЬ НАСКРІЗЬ",
+  // (ПРАКТИЧНИЙ ПРИКЛАД ШИФРУВАННЯ БУВ У node/streams/encrypt-decrypt/ —
+  // ВИДАЛЕНИЙ З РЕПОЗИТОРІЮ, ЛИШИВСЯ В git-ІСТОРІЇ) — ДАНІ "ПРОХОДЯТЬ НАСКРІЗЬ",
   // ЗМІНЮЮЧИСЬ ПО ДОРОЗІ.
 
   class UppercaseTransform extends Transform {
@@ -167,7 +167,8 @@ main().catch((err) => console.error("Помилка в демонстрації:
 // - Transform — ОСОБЛИВИЙ вид Duplex, ДЕ ВХІД АВТОМАТИЧНО ПЕРЕТВОРЮЄТЬСЯ
 //   НА ВИХІД через push() всередині _transform(chunk, encoding, callback) —
 //   так побудовані zlib.createGzip(), crypto cipher-streams
-//   (детально реальний приклад — node/streams/encrypt-decrypt/)
+//   (практичний приклад шифрування — колишній node/streams/encrypt-decrypt/,
+//   видалений з репозиторію, лишився в git-історії)
 // - _flush(callback) викликається ОДИН РАЗ наприкінці — місце
 //   "допрацювати" будь-які залишкові, недооброблені дані (та сама
 //   проблема "розрізаних" chunks, що й у Readable, детально

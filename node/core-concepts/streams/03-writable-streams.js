@@ -127,7 +127,7 @@ async function main() {
   // РОБИШ БАГАТО МАЛЕНЬКИХ write() ПОСПІЛЬ І ХОЧЕШ ЗМЕНШИТИ
   // КІЛЬКІСТЬ РЕАЛЬНИХ SYSCALL-ІВ ДО ДИСКУ/МЕРЕЖІ (той самий принцип
   // "об'єднай кілька операцій в одну", що й Buffer.concat() у
-  // node/buffers/index.js, розділ 7):
+  // node/core-concepts/buffers/index.js, розділ 7):
 
   await new Promise((resolve) => {
     const corkPath = path.join(os.tmpdir(), "streams-cork-demo.txt");

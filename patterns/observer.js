@@ -141,7 +141,7 @@ order.pay();
 //   - іменовані події (emit("paid"), а не один канал);
 //   - once(), off(), listenerCount(), prependListener();
 //   - спеціальна подія "error": emit("error") БЕЗ слухача кидає виняток.
-//   (Streams — теж EventEmitter: node/understanding-streams/.)
+//   (Streams — теж EventEmitter: node/core-concepts/streams/.)
 
 try {
   new EventEmitter().emit("error", new Error("нікому обробити"));

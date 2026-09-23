@@ -31,7 +31,7 @@ async function main() {
   // ========================================================================
 
   // БЕЗ АРГУМЕНТУ encoding readFile() ПОВЕРТАЄ Buffer (сирі байти,
-  // детально Buffer — node/buffers/index.js), А НЕ рядок:
+  // детально Buffer — node/core-concepts/buffers/index.js), А НЕ рядок:
 
   const rawBuffer = await fs.readFile(demoFilePath);
   console.log(Buffer.isBuffer(rawBuffer)); // true

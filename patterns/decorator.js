@@ -166,7 +166,7 @@ storage.write("token", "abc123"); //   [лог] write token
 console.log(storage.read("token")); //   [лог] read token → abc123
 // Дані у PlainStorage зберігаються зашифрованими; лог і шифрування
 // незалежні й складаються довільно (як node:zlib + crypto streams:
-// node/understanding-streams/05-duplex-and-transform.js).
+// node/core-concepts/streams/05-duplex-and-transform.js).
 
 
 // ==========================================================================
