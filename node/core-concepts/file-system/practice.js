@@ -35,8 +35,23 @@ const { Buffer } = require("buffer");
 (async () => {
   const commandFileHandler = await fs.open("./commands.txt", "r");
 
+  const commands = {
+    createFile: "create a file",
+  };
+
+  const createFile = async (path) => {
+    try {
+      const existingFile = await fs.open(path, "r");
+      existingFile.close();
+      return console.log(`File ${path} already exists`);
+    } catch (error) {
+      const newFile = await fs.open(path, "w");
+      console.log(`File ${path} created`);
+      newFile.close();
+    }
+  }
+
   commandFileHandler.on("change", async () => {
-    // console.log(event);
     const bufferSize = (await commandFileHandler.stat()).size;
     const buffer = Buffer.alloc(bufferSize);
     const offset = 0;
@@ -44,7 +59,13 @@ const { Buffer } = require("buffer");
     const position = 0;
 
     await commandFileHandler.read(buffer, offset, length, position);
-    console.log(buffer.toString());
+    // console.log(buffer.toString());
+    const command = buffer.toString("utf-8");
+
+    if (command.includes(commands.createFile)) {
+      const path = command.substring(commands.createFile.length + 1);
+      createFile(path);
+    }
   });
 
   const watcher = await fs.watch("./commands.txt");
